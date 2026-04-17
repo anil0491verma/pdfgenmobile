@@ -257,14 +257,16 @@ async function handleOfflineExport() {
              // Extract perfect final HTML
              const finalHtmlString = iframeDoc.documentElement.outerHTML;
              
-             // Trigger Native Android Storage plugin
-             await window.Capacitor.Plugins.PdfGenerator.fromHTML({
-                 html: finalHtmlString,
+             // Trigger Native Capgo PDF Generator (correct API: fromData)
+             const result = await window.Capacitor.Plugins.PdfGenerator.fromData({
+                 data: finalHtmlString,
                  documentSize: "A4",
+                 orientation: "portrait",
+                 type: "share",
                  fileName: `UjjainTravel_${new Date().getTime()}`
              });
              
-             showToast('✅ PDF successfully saved to your phone!', 'success');
+             showToast('✅ PDF generated! Check your share/save dialog.', 'success');
         } else {
              // Fallback for computer browsers
              showToast('Triggering standard computer browser print...', 'success');
