@@ -31,7 +31,11 @@ jobs:
         run: npm install
 
       - name: Sync Capacitor to Android
-        run: npx cap sync android
+        run: npx @capacitor/cli sync android
+
+      - name: Make Gradlew Executable
+        working-directory: ./android
+        run: chmod +x ./gradlew
 
       - name: Build APK via Gradle
         working-directory: ./android
