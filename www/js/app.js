@@ -250,14 +250,32 @@ async function handleOfflineExport() {
     iframeDoc.body.removeAttribute('contenteditable');
     iframeDoc.body.style.cursor = '';
     
-    showToast('Triggering Android PDF Exporter...', 'success');
-    
-    // Execute NATIVE Print to trigger "Save as PDF" precisely.
-    // In Capacitor, calling window.print() flawlessly generates standard A4 pagination dialog natively saving offline
-    iframe.contentWindow.print();
-
-    // Restore editing
-    iframeDoc.body.contentEditable = true;
+    try {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+             showToast('Building Native High-Res PDF...', 'success');
+             
+             // Extract perfect final HTML
+             const finalHtmlString = iframeDoc.documentElement.outerHTML;
+             
+             // Trigger Native Android Storage plugin
+             await window.Capacitor.Plugins.PdfGenerator.fromHTML({
+                 html: finalHtmlString,
+                 documentSize: "A4",
+                 fileName: `UjjainTravel_${new Date().getTime()}`
+             });
+             
+             showToast('✅ PDF successfully saved to your phone!', 'success');
+        } else {
+             // Fallback for computer browsers
+             showToast('Triggering standard computer browser print...', 'success');
+             iframe.contentWindow.print();
+        }
+    } catch(err) {
+        alert("PDF Exporter Error: " + err);
+    } finally {
+        // Restore editing
+        iframeDoc.body.contentEditable = true;
+    }
 }
 
 function showToast(msg, type = 'info') { alert(msg); }
