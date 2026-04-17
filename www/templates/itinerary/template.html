@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tour Itinerary Poster - {{ booking_id }}</title>
+  <style>
+    /* ========================================
+       PREMIUM POSTER-STYLE ITINERARY
+       ======================================== */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 10pt;
+      line-height: 1.6;
+      color: #1f2937;
+      background: transparent;
+    }
+
+    @page {
+      size: A4;
+      margin: 12mm;
+      @bottom-center {
+        content: "🌟 Ujjain Travel – Trusted Spiritual Travel Partner 🌟";
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        color: #f97316;
+        font-weight: 700;
+      }
+    }
+
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Header Poster Style */
+    .header-poster {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #fff7ed 0%, #fff 100%);
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid #ffedd5;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      z-index: 2;
+    }
+
+    .logo-img {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
+    }
+
+    .brand-name h1 {
+      font-size: 20pt;
+      font-weight: 800;
+      color: #f97316;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-name p {
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .id-badge {
+      text-align: right;
+      z-index: 2;
+    }
+
+    .badge-tab {
+      display: inline-block;
+      background: #f97316;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 9pt;
+      margin-bottom: 5px;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+    }
+
+    /* Guest Details Summary */
+    .summary-box {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border-left: 5px solid #f97316;
+    }
+
+    .summary-item { display: flex; flex-direction: column; }
+    .label { font-size: 7.5pt; color: #64748b; text-transform: uppercase; font-weight: 800; margin-bottom: 2px; }
+    .val { font-size: 10pt; color: #1e293b; font-weight: 700; }
+
+    /* Itinerary Content */
+    .section-header {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #1e293b;
+      margin: 30px 0 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-header::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: #f1f5f9;
+      margin-left: 10px;
+    }
+
+    .itinerary-body {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      font-size: 10pt;
+      line-height: 1.6;
+      color: #334155;
+      padding-left: 10px;
+      padding-bottom: 40px;
+    }
+
+    .day-title {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #ffffff;
+      background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+      padding: 8px 15px;
+      border-radius: 8px;
+      display: inline-block;
+      margin: 20px 0 10px 0;
+      box-shadow: 0 4px 10px rgba(249, 115, 22, 0.2);
+      width: 100%;
+    }
+
+    .itinerary-list {
+      list-style: none;
+      margin-left: 15px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+    }
+
+    .itinerary-list li {
+      position: relative;
+      padding-left: 20px;
+      margin-bottom: 5px;
+    }
+
+    .itinerary-list li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: #f97316;
+      font-weight: bold;
+      font-size: 16pt;
+      line-height: 0.9;
+      top: 0;
+    }
+
+    .highlight-line {
+      font-weight: 700;
+      color: #1f2937;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tag-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .tag-item {
+      background: #fff7ed;
+      color: #f97316;
+      border: 1px solid #ffedd5;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 9pt;
+      font-weight: 700;
+    }
+
+    .itinerary-header {
+      font-size: 12pt;
+      font-weight: 800;
+      color: #f97316;
+      margin-top: 25px;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #fff7ed;
+      padding-bottom: 5px;
+    }
+
+    .normal-line {
+      margin-bottom: 3px;
+    }
+
+    /* Policy Block */
+    .policy-container {
+      background: #ffffff;
+      border: 2px solid #f1f5f9;
+      border-radius: 16px;
+      padding: 25px;
+      padding-left: 45px; /* Indentation for the entire policy block */
+      page-break-before: always;
+    }
+
+
+    .policy-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #f97316;
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px dashed #fed7aa;
+    }
+
+    .policy-section { margin-bottom: 20px; }
+    .policy-section h3 { font-size: 12pt; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .pos-text { color: #16a34a; }
+    .neg-text { color: #dc2626; }
+
+    .policy-subgroup { margin-bottom: 15px; }
+    .policy-subgroup strong { font-size: 9.5pt; color: #475569; display: block; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; width: fit-content; }
+    
+    .policy-list { 
+      list-style: none; 
+      margin-left: 15px; 
+    }
+    .policy-list li { 
+      position: relative; 
+      padding-left: 25px; 
+      margin-bottom: 6px; 
+      font-size: 9.5pt; 
+      color: #4b5563;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .policy-list li::before { 
+      content: '•'; 
+      position: absolute; 
+      left: 0; 
+      color: #f97316; 
+      font-weight: bold;
+      font-size: 14pt;
+      line-height: 1;
+      top: 0;
+    }
+
+
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt; border-radius: 8px; overflow: hidden; }
+    th { background: #f8fafc; color: #64748b; text-align: left; padding: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid #e2e8f0; }
+    td { padding: 10px; border: 1px solid #e2e8f0; color: #334155; font-weight: 500; }
+
+    .important-note { background: #fffef2; border: 1px solid #fef3c7; padding: 12px; border-radius: 8px; margin: 10px 0; }
+    .important-note strong { color: #92400e; }
+
+      .footer-signature {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 12pt;
+      font-weight: 900;
+      color: #f97316;
+    }
+
+    /* ========================================
+       PREVIEW / SCREEN MODE SPECIFIC RULES
+       Simulates A4 paper and exact page breaks
+       ======================================== */
+    @media screen {
+      body {
+        background-color: #eceff1;
+        padding: 40px 0;
+      }
+      .container {
+        width: 210mm; /* A4 width */
+        min-height: 297mm;
+        margin: 0 auto;
+        background: white;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        /* Playwright matches: left: 18mm, right: 18mm in code */
+        padding: 0 18mm; 
+        
+        /* 297mm (A4) - 15mm top - 15mm bottom = 267mm printable area */
+        /* This renders a bright red indicator line exactly where Chromium breaks the page */
+        background-image: repeating-linear-gradient(
+          to bottom,
+          transparent,
+          transparent 266mm,
+          #ef4444 266mm,
+          #ef4444 267mm
+        );
+        position: relative;
+      }
+      
+      /* Visual banner in preview */
+      body::before {
+        content: "A4 PAGE PREVIEW (Red lines show automatic cut-offs)";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: #1e293b;
+        color: white;
+        text-align: center;
+        padding: 6px 0;
+        font-size: 12px;
+        font-weight: 800;
+        z-index: 9999;
+        letter-spacing: 1px;
+      }
+
+      /* Visualize Forced Page Breaks */
+      .policy-container {
+        position: relative;
+        margin-top: 100px;
+        border-top: 2px dashed #f97316 !important;
+      }
+      .policy-container::before {
+        content: "✂️ FORCED PAGE BREAK (Always Starts New Page)";
+        position: absolute;
+        top: -30px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        color: #f97316;
+        font-size: 11pt;
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- HEADER POSTER -->
+    <header class="header-poster">
+      <div class="logo-section">
+        <img src="{{ logo_data_url }}" alt="Logo" class="logo-img">
+        <div class="brand-name">
+          <h1>UjjainTravel</h1>
+          <p>Trusted Spiritual Travel Partner</p>
+        </div>
+      </div>
+      <div class="id-badge">
+        <div class="badge-tab">GUEST ITINERARY</div>
+        <div class="val" style="font-size: 8pt; color: #64748b;">ID: #{{ booking_id }}</div>
+      </div>
+    </header>
+
+    <!-- TRAVEL SUMMARY -->
+    <div class="summary-box">
+      <div class="summary-item">
+        <div class="label">Primary Guest</div>
+        <div class="val">{{ customer_name }}</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Travel Dates</div>
+        <div class="val">{{ start_date }} to {{ end_date }}</div>
+      </div>
+
+      <div class="summary-item">
+        <div class="label">Pax Count</div>
+        <div class="val">{{ num_pax | default('—') }}</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Contact</div>
+        <div class="val">{{ customer_phone | default('—') }}</div>
+      </div>
+    </div>
+
+    <!-- MAIN ITINERARY -->
+    <div class="section-header">📍 Detailed Tour Plan</div>
+    <div class="itinerary-body">{{ itinerary_content | default('Plan details will be finalized shortly.') | safe }}</div>
+
+    <!-- POLICIES POSTER PAGE -->
+    <div class="policy-container">
+      <div class="policy-title">📜 UjjainTravel – Complete Policy, Inclusions & Exclusions</div>
+
+      <div class="policy-section">
+        <h3 class="pos-text">✅ Package Inclusions</h3>
+        <div class="policy-subgroup">
+          <strong>Private AC cab:</strong>
+          <ul class="policy-list">
+            <li>Indore Airport pickup & drop</li>
+            <li>All local travel for 3 days</li>
+            <li>Baglamukhi & Omkareshwar trips (if opted)</li>
+          </ul>
+        </div>
+        <div class="policy-subgroup">
+          <strong>Accommodation:</strong>
+          <ul class="policy-list">
+            <li>3 Nights hotel stay</li>
+            <li>1 Room with 2 separate beds</li>
+          </ul>
+        </div>
+        <div class="policy-subgroup">
+          <strong>Darshan & Temple Assistance:</strong>
+          <ul class="policy-list">
+            <li>VIP Darshan arrangement – Mahakaleshwar</li>
+            <li>VIP Darshan – Omkareshwar (if included)</li>
+            <li>Bhasma Aarti booking assistance (subject to availability)</li>
+          </ul>
+        </div>
+        <div class="policy-subgroup">
+          <strong>Support Services:</strong>
+          <ul class="policy-list">
+            <li>Local travel coordination</li>
+            <li>Basic temple guidance</li>
+            <li>24&times;7 WhatsApp / call support</li>
+          </ul>
+        </div>
+        <div class="policy-subgroup">
+          <strong>Operational Costs:</strong>
+          <ul class="policy-list">
+            <li>Fuel, toll, parking</li>
+            <li>Driver allowance & waiting charges</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <h3 class="neg-text">❌ Package Exclusions</h3>
+        <ul class="policy-list">
+          <li>Sandhya / Special Aarti tickets</li>
+          <li>VIP Darshan at Baglamukhi Temple</li>
+          <li>Personal पूजा / rituals / donations</li>
+          <li>Meals (unless specified)</li>
+          <li>Boating / special entry tickets</li>
+          <li>Early check-in / late checkout</li>
+          <li>Personal expenses (shopping, tips, etc.)</li>
+          <li>Travel insurance</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h3>🔱 Bhasma Aarti Policy</h3>
+        <ul class="policy-list">
+          <li>Subject to availability & temple authority approval</li>
+          <li>Not guaranteed under any circumstances</li>
+          <li>If NOT booked &rarr; 100% refund of Aarti amount</li>
+          <li>If booked successfully &rarr; Non-refundable</li>
+          <li>Guests must provide valid ID in advance</li>
+          <li>Non-compliance with rules &rarr; No refund</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h3>⚠️ Important Service Conditions</h3>
+        <div class="important-note">
+          <strong>Temple & Darshan Disclaimer:</strong> Darshan timings, VIP access, and rituals are controlled by temple authorities and cannot be guaranteed.
+        </div>
+        <div class="important-note">
+          <strong>VIP Darshan:</strong> VIP access means assisted/priority entry, not immediate entry.
+        </div>
+        <div class="important-note">
+          <strong>Optional Tours:</strong> Baglamukhi & Omkareshwar trips must be confirmed in advance.
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <h3>🚗 Driver & Cab Policy</h3>
+        <ul class="policy-list">
+          <li>Driver duty hours: 8:00 AM – 8:00 PM (Usage beyond this will be considered extra)</li>
+          <li>Late night charges (after 9 PM): &rlm;₹200 per hour (or part thereof)</li>
+          <li>AC usage depends on: Weather conditions & Vehicle safety requirements</li>
+          <li>Extra usage: Additional km / hours beyond itinerary will be chargeable</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h3>🏨 Hotel Policy</h3>
+        <ul class="policy-list">
+          <li>Hotels provided are clean, comfortable, pilgrimage-standard properties</li>
+          <li>These are not luxury hotels unless explicitly mentioned</li>
+          <li>Room allocation subject to: Availability & Standard check-in policies</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h3>💰 Pricing & Payment Policy</h3>
+        <ul class="policy-list">
+          <li>Advance: 40%–50% required for confirmation</li>
+          <li>Balance: Before travel / at arrival</li>
+          <li>Prices may change based on: Season / demand, Hotel category, Temple rush / VIP availability</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h3>📅 Peak Season Clause</h3>
+        <p style="font-size: 9.5pt; color: #4b5563;">Prices may increase during: Shravan month, Mahashivratri, Long weekends & festivals.</p>
+      </div>
+
+      <div class="policy-section">
+        <h3>🔁 Cancellation & Refund Policy</h3>
+        <table>
+          <thead>
+            <tr><th>Cancellation Time</th><th>Refund</th><th>Deduction</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>More than 7 days</td><td>90%</td><td>10%</td></tr>
+            <tr><td>3–7 days</td><td>70%</td><td>30%</td></tr>
+            <tr><td>24 hrs – 3 days</td><td>60%*</td><td>40%</td></tr>
+            <tr><td>Less than 24 hrs</td><td>No Refund</td><td>100%</td></tr>
+            <tr><td>No Show</td><td>No Refund</td><td>100%</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size: 8pt; color: #64748b; font-style: italic;">*Special condition applied as per operational feasibility</p>
+      </div>
+
+      <div class="policy-section">
+        <h3 class="neg-text">❗ Non-Refundable Components</h3>
+        <ul class="policy-list">
+          <li>Bhasma Aarti (after confirmation)</li>
+          <li>VIP darshan charges</li>
+          <li>Temple / puja bookings</li>
+          <li>Government fees</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h3>🔄 Rescheduling Policy</h3>
+        <ul class="policy-list">
+          <li>1 Free reschedule (if requested &ge; 3 days prior)</li>
+          <li>Second reschedule: ₹500 charge</li>
+        </ul>
+        <div class="important-note">
+          <strong>❗ Important:</strong> Aarti bookings & VIP entries cannot be rescheduled. No refund if already booked. Subject to availability.
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <h3>📩 Cancellation Request Process</h3>
+        <p style="font-size: 9.5pt; color: #4b5563; margin-bottom: 5px;">Send request via WhatsApp: +91 99703 99570 or Email: care@ujjaintravel.com</p>
+        <p style="font-size: 9.5pt; color: #4b5563;">Include: Booking name, Travel date. Refund processed within 5–7 working days.</p>
+      </div>
+
+      <div class="policy-section">
+        <h3>⚖️ Legal & Compliance</h3>
+        <p style="font-size: 9.5pt; color: #4b5563; margin-bottom: 5px;"><strong>Liability Clause:</strong> UjjainTravel is not liable for Delays, Injuries, Loss of belongings, Damages during the tour.</p>
+        <p style="font-size: 9.5pt; color: #4b5563;"><strong>Jurisdiction Clause:</strong> All disputes are subject to Ujjain, Madhya Pradesh jurisdiction only.</p>
+      </div>
+
+      <div class="policy-section">
+        <h3>🌧️ Force Majeure</h3>
+        <p style="font-size: 9.5pt; color: #4b5563;">In case of: Natural disasters, Temple closure, Government restrictions. We offer: Free reschedule OR Refund after actual cost deductions.</p>
+      </div>
+
+      <div class="policy-section">
+        <h3>✅ Policy Acceptance</h3>
+        <p style="font-size: 9.5pt; color: #4b5563;">By making any advance payment, the guest confirms: Full understanding & Acceptance of all terms & conditions.</p>
+      </div>
+
+      <div class="footer-signature">
+        <div style="margin-bottom: 8px;">🌟 UjjainTravel | Your Trusted Pilgrimage Partner 🌟</div>
+        <div style="font-size: 9pt; font-weight: 500; color: #4b5563; display: flex; justify-content: center; gap: 20px;">
+          <span>🌐 www.ujjaintravel.com</span>
+          <span>📧 care@ujjaintravel.com</span>
+          <span>📞 +91 99703 99570</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

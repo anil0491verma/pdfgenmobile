@@ -1,0 +1,83 @@
+{
+  "name": "invoice",
+  "title": "Tax Invoice",
+  "description": "Generate a professional GST-compliant tax invoice",
+  "version": "1.0",
+  "sections": [
+    {
+      "id": "company",
+      "title": "Your Company Details",
+      "icon": "fa-building",
+      "fields": [
+        { "name": "company_name", "label": "Company Name", "type": "text", "required": true, "placeholder": "e.g. UjjainTravel Pvt Ltd" },
+        { "name": "company_address", "label": "Company Address", "type": "textarea", "required": true, "placeholder": "Full address with pincode" },
+        { "name": "company_phone", "label": "Phone", "type": "tel", "required": true, "placeholder": "+91 9511910399" },
+        { "name": "company_email", "label": "Email", "type": "email", "required": false, "placeholder": "care@ujjaintravel.com" },
+        { "name": "company_gstin", "label": "GSTIN", "type": "text", "required": false, "placeholder": "e.g. 23AABCU9603R1ZP" },
+        { "name": "company_pan", "label": "PAN", "type": "text", "required": false, "placeholder": "e.g. AABCU9603R" }
+      ]
+    },
+    {
+      "id": "invoice_details",
+      "title": "Invoice Details",
+      "icon": "fa-file-invoice",
+      "fields": [
+        { "name": "invoice_number", "label": "Invoice Number", "type": "text", "required": true, "placeholder": "e.g. INV-2026-001", "auto_generate": true },
+        { "name": "invoice_date", "label": "Invoice Date", "type": "date", "required": true, "default": "today" },
+        { "name": "due_date", "label": "Due Date", "type": "date", "required": false },
+        { "name": "place_of_supply", "label": "Place of Supply", "type": "text", "required": false, "placeholder": "e.g. Madhya Pradesh" }
+      ]
+    },
+    {
+      "id": "customer",
+      "title": "Bill To (Customer)",
+      "icon": "fa-user",
+      "fields": [
+        { "name": "customer_name", "label": "Customer Name", "type": "text", "required": true, "placeholder": "e.g. Rajesh Kumar" },
+        { "name": "customer_address", "label": "Customer Address", "type": "textarea", "required": false, "placeholder": "Full address" },
+        { "name": "customer_phone", "label": "Phone", "type": "tel", "required": false, "placeholder": "+91 98765 43210" },
+        { "name": "customer_email", "label": "Email", "type": "email", "required": false, "placeholder": "customer@email.com" },
+        { "name": "customer_gstin", "label": "Customer GSTIN", "type": "text", "required": false, "placeholder": "If B2B invoice" }
+      ]
+    },
+    {
+      "id": "items",
+      "title": "Invoice Items",
+      "icon": "fa-list",
+      "type": "table",
+      "columns": [
+        { "name": "description", "label": "Description", "type": "text", "width": "40%", "required": true },
+        { "name": "hsn_code", "label": "HSN/SAC", "type": "text", "width": "12%" },
+        { "name": "quantity", "label": "Qty", "type": "number", "width": "10%", "min": 1, "default": 1, "required": true },
+        { "name": "rate", "label": "Rate (₹)", "type": "number", "width": "15%", "min": 0, "step": 0.01, "required": true },
+        { "name": "amount", "label": "Amount (₹)", "type": "computed", "width": "15%", "formula": "quantity * rate" }
+      ],
+      "min_rows": 1,
+      "max_rows": 20
+    },
+    {
+      "id": "tax",
+      "title": "Tax & Totals",
+      "icon": "fa-calculator",
+      "fields": [
+        { "name": "discount_percent", "label": "Discount (%)", "type": "number", "required": false, "min": 0, "max": 100, "default": 0 },
+        { "name": "cgst_rate", "label": "CGST Rate (%)", "type": "number", "required": false, "min": 0, "max": 50, "default": 9 },
+        { "name": "sgst_rate", "label": "SGST Rate (%)", "type": "number", "required": false, "min": 0, "max": 50, "default": 9 },
+        { "name": "igst_rate", "label": "IGST Rate (%) — for inter-state", "type": "number", "required": false, "min": 0, "max": 50, "default": 0 }
+      ]
+    },
+    {
+      "id": "payment",
+      "title": "Payment & Notes",
+      "icon": "fa-credit-card",
+      "fields": [
+        { "name": "payment_method", "label": "Payment Method", "type": "select", "required": false, "options": ["Cash", "Bank Transfer", "UPI", "Cheque", "Credit Card", "Razorpay"] },
+        { "name": "bank_name", "label": "Bank Name", "type": "text", "required": false, "placeholder": "e.g. State Bank of India" },
+        { "name": "account_number", "label": "Account Number", "type": "text", "required": false },
+        { "name": "ifsc_code", "label": "IFSC Code", "type": "text", "required": false },
+        { "name": "upi_id", "label": "UPI ID", "type": "text", "required": false, "placeholder": "e.g. company@upi" },
+        { "name": "notes", "label": "Notes / Terms", "type": "textarea", "required": false, "placeholder": "Payment terms, thank you message, etc.", "default": "Thank you for your business!\nPayment is due within 15 days of invoice date." }
+      ]
+    }
+  ]
+}

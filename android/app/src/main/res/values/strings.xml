@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">UjjainTravel</string>
+    <string name="title_activity_main">UjjainTravel</string>
+    <string name="package_name">com.ujjaintravel.pdfgen</string>
+    <string name="custom_url_scheme">com.ujjaintravel.pdfgen</string>
+</resources>
