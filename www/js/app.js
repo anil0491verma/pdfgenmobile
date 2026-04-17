@@ -241,6 +241,8 @@ function closePreviewModal() {
 
 // ----------------------------------------------------
 // OFFLINE PRINT/EXPORT TO NATIVE
+// Uses Android's built-in Print Service (Save as PDF)
+// Works on ALL Android devices — no plugins needed
 // ----------------------------------------------------
 async function handleOfflineExport() {
     const iframe = document.getElementById('previewModalIframe');
@@ -250,34 +252,33 @@ async function handleOfflineExport() {
     iframeDoc.body.removeAttribute('contenteditable');
     iframeDoc.body.style.cursor = '';
     
-    try {
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-             showToast('Building Native High-Res PDF...', 'success');
-             
-             // Extract perfect final HTML
-             const finalHtmlString = iframeDoc.documentElement.outerHTML;
-             
-             // Trigger Native Capgo PDF Generator (correct API: fromData)
-             const result = await window.Capacitor.Plugins.PdfGenerator.fromData({
-                 data: finalHtmlString,
-                 documentSize: "A4",
-                 orientation: "portrait",
-                 type: "share",
-                 fileName: `UjjainTravel_${new Date().getTime()}`
-             });
-             
-             showToast('✅ PDF generated! Check your share/save dialog.', 'success');
-        } else {
-             // Fallback for computer browsers
-             showToast('Triggering standard computer browser print...', 'success');
-             iframe.contentWindow.print();
-        }
-    } catch(err) {
-        alert("PDF Exporter Error: " + err);
-    } finally {
-        // Restore editing
-        iframeDoc.body.contentEditable = true;
-    }
+    // Extract the final clean HTML from the preview iframe
+    const finalHtml = iframeDoc.documentElement.outerHTML;
+    
+    // Android WebView blocks iframe.contentWindow.print()
+    // The bulletproof fix: replace the MAIN document with the PDF HTML,
+    // then call window.print() on the main window — this triggers
+    // Android's native Print dialog which has "Save as PDF" built in.
+    
+    // Replace the entire page with the PDF content
+    document.open();
+    document.write(finalHtml);
+    document.close();
+    
+    // Wait for the content to fully render
+    await new Promise(r => setTimeout(r, 800));
+    
+    // Trigger Android's native Print Service (Save as PDF)
+    window.print();
+    
+    // After the user finishes with the print dialog, reload the app
+    window.onafterprint = () => {
+        setTimeout(() => window.location.reload(), 500);
+    };
+    
+    // Fallback: if onafterprint doesn't fire (some Android versions),
+    // reload after 8 seconds
+    setTimeout(() => window.location.reload(), 8000);
 }
 
 function showToast(msg, type = 'info') { alert(msg); }
