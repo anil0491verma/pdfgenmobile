@@ -107,10 +107,24 @@ function renderForm(schema) {
         addItemRow();
     } else {
         sectionEl.innerHTML = `<h4 class="font-bold text-slate-800">${section.title}</h4>
-        <div class="grid grid-cols-1 gap-x-6 gap-y-4">${section.fields.map(renderField).join('')}</div>`;
+        <div class="grid grid-cols-2 gap-x-4 gap-y-4">${section.fields.map(renderField).join('')}</div>`;
         container.appendChild(sectionEl);
     }
   });
+
+  // Toggle Visibility for Breakup
+  const toggleBtn = document.getElementById('show_breakup');
+  if (toggleBtn) {
+    const breakupFields = ['cab_price', 'arti_price', 'pooja_price', 'tickets_price', 'hotel_price', 'misc_name', 'misc_price'];
+    const updateVisibility = () => {
+        breakupFields.forEach(id => {
+            const container = document.getElementById(id)?.closest('.field-container');
+            if (container) container.style.display = toggleBtn.checked ? 'block' : 'none';
+        });
+    };
+    toggleBtn.addEventListener('change', updateVisibility);
+    updateVisibility();
+  }
 
   // Set defaults and dynamic values
   schema.sections.forEach(s => {
@@ -131,12 +145,24 @@ function renderForm(schema) {
 }
 
 function renderField(field) {
-  const isFullWidth = field.type === 'textarea';
-  let inputHtml = field.type === 'textarea' 
-    ? `<textarea id="${field.name}" name="${field.name}" class="w-full p-3 border rounded" ${field.required ? 'required' : ''}>${field.default || ''}</textarea>`
-    : `<input type="${field.type || 'text'}" id="${field.name}" name="${field.name}" class="w-full p-3 border rounded" ${field.required ? 'required' : ''} value="${field.default || ''}" />`;
+  const isFullWidth = field.type === 'textarea' || !field.half;
+  let inputHtml = "";
   
-  return `<div class="field-container ${isFullWidth ? 'md:col-span-2' : ''}"><label>${field.label}</label>${inputHtml}</div>`;
+  if (field.type === 'textarea') {
+    inputHtml = `<textarea id="${field.name}" name="${field.name}" class="w-full p-3 border rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" rows="4" ${field.required ? 'required' : ''}>${field.default || ''}</textarea>`;
+  } else if (field.type === 'checkbox') {
+    inputHtml = `<div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <input type="checkbox" id="${field.name}" name="${field.name}" class="w-6 h-6 accent-brand-500" ${field.default ? 'checked' : ''} />
+        <span class="text-sm font-medium text-slate-600">Enable this option</span>
+    </div>`;
+  } else {
+    inputHtml = `<input type="${field.type || 'text'}" id="${field.name}" name="${field.name}" class="w-full p-3 border rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" ${field.required ? 'required' : ''} value="${field.default || ''}" placeholder="${field.placeholder || ''}" />`;
+  }
+  
+  return `<div class="field-container ${isFullWidth ? 'col-span-2' : 'col-span-1'}">
+    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" for="${field.name}">${field.label}</label>
+    ${inputHtml}
+  </div>`;
 }
 
 function addItemRow() {
@@ -154,7 +180,12 @@ function collectFormData() {
   const data = {};
   currentSchema.sections.forEach((s) => {
     if (s.type === 'table') return;
-    s.fields.forEach(f => { data[f.name] = document.getElementById(f.name)?.value; });
+    s.fields.forEach(f => { 
+        const el = document.getElementById(f.name);
+        if (el) {
+            data[f.name] = (f.type === 'checkbox') ? el.checked : el.value;
+        }
+    });
   });
   return data;
 }

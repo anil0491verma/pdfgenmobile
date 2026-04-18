@@ -337,6 +337,37 @@
         font-style: italic;
     }
 
+    /* Breakup Table Stylization */
+    .breakup-table {
+        width: 100%;
+        margin-top: 30px;
+        margin-bottom: 0px;
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+    .breakup-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 8.5pt;
+        text-transform: uppercase;
+        padding: 10px 15px;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .breakup-table td {
+        padding: 8px 15px;
+        font-size: 9.5pt;
+        color: #334155;
+        border-bottom: 1px solid #f1f5f9;
+        background: white;
+    }
+    .breakup-table tr:last-child td { border-bottom: none; }
+    .breakup-label { font-weight: 700; color: #475569; display: flex; align-items: center; gap: 8px; }
+    .breakup-value { font-weight: 800; color: #1e293b; text-align: right; }
+    .breakup-icon { color: #6366f1; font-size: 10pt; width: 16px; text-align: center; }
+
       .footer-signature {
       text-align: center;
       margin-top: 40px;
@@ -454,6 +485,55 @@
     <!-- MAIN ITINERARY -->
     <div class="section-header">📍 Detailed Tour Plan</div>
     <div class="itinerary-body">{{ itinerary_content | default('Plan details will be finalized shortly.') | safe }}</div>
+
+    {% if show_breakup %}
+    <table class="breakup-table">
+      <thead>
+        <tr>
+          <th>Service Description</th>
+          <th style="text-align: right;">Amount (Rs)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if cab_price %}
+        <tr>
+          <td><div class="breakup-label"><i class="fas fa-car breakup-icon"></i> Cab & Transportation Services</div></td>
+          <td class="breakup-value">Rs. {{ cab_price }}</td>
+        </tr>
+        {% endif %}
+        {% if arti_price %}
+        <tr>
+          <td><div class="breakup-label"><i class="fas fa-om breakup-icon"></i> Arti & Darshan Services</div></td>
+          <td class="breakup-value">Rs. {{ arti_price }}</td>
+        </tr>
+        {% endif %}
+        {% if pooja_price %}
+        <tr>
+          <td><div class="breakup-label"><i class="fas fa-pray breakup-icon"></i> Puja & Ritual Arrangements</div></td>
+          <td class="breakup-value">Rs. {{ pooja_price }}</td>
+        </tr>
+        {% endif %}
+        {% if tickets_price %}
+        <tr>
+          <td><div class="breakup-label"><i class="fas fa-ticket-alt breakup-icon"></i> Skip-the-Queue / VIP Tickets</div></td>
+          <td class="breakup-value">Rs. {{ tickets_price }}</td>
+        </tr>
+        {% endif %}
+        {% if hotel_price %}
+        <tr>
+          <td><div class="breakup-label"><i class="fas fa-hotel breakup-icon"></i> Hotel & Accommodation</div></td>
+          <td class="breakup-value">Rs. {{ hotel_price }}</td>
+        </tr>
+        {% endif %}
+        {% if misc_price %}
+        <tr>
+          <td><div class="breakup-label"><i class="fas fa-plus-circle breakup-icon"></i> {{ misc_name | default('Miscellaneous Charges') }}</div></td>
+          <td class="breakup-value">Rs. {{ misc_price }}</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+    {% endif %}
 
     {% if total_amount %}
     <div class="price-card">

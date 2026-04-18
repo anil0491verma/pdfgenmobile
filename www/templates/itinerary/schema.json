@@ -15,9 +15,23 @@
         { "name": "tour_name", "label": "Tour Title", "type": "text", "required": true, "default": "Ujjain Mahakaleshwar & Omkareshwar Tour" },
         { "name": "start_date", "label": "Journey Start", "type": "date", "required": true, "default": "2026-04-04" },
         { "name": "end_date", "label": "Journey End", "type": "date", "required": true, "default": "2026-04-06" },
-        { "name": "num_pax", "label": "Number of Passengers", "type": "text", "required": false, "default": "2 Adults" },
-        { "name": "total_amount", "label": "Total Package Amount (Rs)", "type": "text", "required": false, "placeholder": "e.g. 15,500" }
-
+        { "name": "num_pax", "label": "Number of Passengers", "type": "text", "required": false, "default": "2 Adults" }
+      ]
+    },
+    {
+      "id": "pricing",
+      "title": "Pricing & Payment Breakup",
+      "icon": "fa-money-bill-wave",
+      "fields": [
+        { "name": "show_breakup", "label": "Show Detailed Payment Breakup?", "type": "checkbox", "required": false },
+        { "name": "cab_price", "label": "Cab Services (Rs)", "type": "number", "half": true },
+        { "name": "arti_price", "label": "Arti Services (Rs)", "type": "number", "half": true },
+        { "name": "pooja_price", "label": "Pooja Services (Rs)", "type": "number", "half": true },
+        { "name": "tickets_price", "label": "Skip the Queue Tickets (Rs)", "type": "number", "half": true },
+        { "name": "hotel_price", "label": "Hotel & Accommodation (Rs)", "type": "number", "half": true },
+        { "name": "misc_name", "label": "Misc. Charge Title", "type": "text", "half": true, "default": "Miscellaneous Charges" },
+        { "name": "misc_price", "label": "Misc. Charge Amount (Rs)", "type": "number", "half": true },
+        { "name": "total_amount", "label": "Final Total Amount (Rs)", "type": "text", "required": true, "placeholder": "e.g. 15,500" }
       ]
     },
     {
