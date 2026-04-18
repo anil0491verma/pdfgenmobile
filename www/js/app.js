@@ -325,24 +325,30 @@ async function handleOfflineExport() {
         const base64Data = await blobToBase64(pdfBlob);
 
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            const { Filesystem, Directory, Share } = window.Capacitor.Plugins;
+            const { Filesystem, Share } = window.Capacitor.Plugins;
             let savedFile;
 
+            // Manual Directory constants for safety
+            const Dir = {
+                Documents: 'DOCUMENTS',
+                Cache: 'CACHE'
+            };
+
             try {
-                // Try writing to Documents folder (requires permission)
+                // Try writing to Documents folder
                 savedFile = await Filesystem.writeFile({
                     path: fileName,
                     data: base64Data,
-                    directory: Directory.Documents,
+                    directory: Dir.Documents,
                     recursive: true
                 });
             } catch (err) {
                 console.warn('Documents access failed, falling back to Cache:', err);
-                // FALLBACK: Save to Cache (No permissions needed)
+                // FALLBACK: Save to Cache (Always works without permissions)
                 savedFile = await Filesystem.writeFile({
                     path: fileName,
                     data: base64Data,
-                    directory: Directory.Cache,
+                    directory: Dir.Cache,
                     recursive: true
                 });
             }
