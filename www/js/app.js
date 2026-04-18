@@ -302,21 +302,21 @@ async function handleOfflineExport() {
     finalStyles += `
         <style>
             * { animation: none !important; transition: none !important; }
-            body, html { 
+            html, body { 
                 background: #fffcf7 !important; 
                 margin: 0 !important; 
                 padding: 0 !important; 
-                width: 794px !important;
+                width: 794px !important; /* Exactly 210mm @ 96dpi */
+                overflow: visible !important;
             }
             .container { 
-                width: 100% !important; 
-                max-width: 794px !important;
-                padding: 10mm !important; 
+                width: 794px !important; 
+                padding: 12mm !important; 
                 margin: 0 !important; 
                 opacity: 1 !important; 
                 background: #fffcf7 !important;
                 display: block !important;
-                height: auto !important;
+                min-height: 100%;
                 box-shadow: none !important;
                 box-sizing: border-box !important;
             }
@@ -328,16 +328,19 @@ async function handleOfflineExport() {
     exportBox.innerHTML = finalStyles + originalContainer.outerHTML;
     document.body.appendChild(exportBox);
 
+    // CRITICAL: Ensure we are at the top for capture
+    window.scrollTo(0, 0);
+
     // Wait for internal asset resolution
     const images = Array.from(exportBox.querySelectorAll('img'));
     await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })));
     
     // Check height
-    const height = exportBox.offsetHeight;
+    const height = exportBox.scrollHeight;
     if (height < 100) {
         document.body.removeChild(exportBox);
         overlay.remove();
-        alert('Rendering Error: The document appears empty (Height: ' + height + 'px). Please check your data.');
+        alert('Rendering Error: The document appears empty.');
         return;
     }
 
@@ -349,30 +352,31 @@ async function handleOfflineExport() {
         
         // 1. RAW CANVAS CAPTURE (For Pixel Validation)
         const canvas = await html2canvas(exportBox, {
-            scale: 2, // Upped scale for better clarity on mobile
+            scale: 2,
             useCORS: true,
             backgroundColor: '#fffcf7',
             width: 794,
-            height: exportBox.scrollHeight,
+            windowWidth: 794,
+            height: height,
+            scrollY: 0,
+            scrollX: 0,
             logging: false
         });
 
-        // 2. PIXEL VALIDATOR: Check if the canvas is just a white/transparent sheet
+        // 2. PIXEL VALIDATOR
         const ctx = canvas.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, canvas.width, Math.min(canvas.height, 1000)); // Check first 1000px
+        const imageData = ctx.getImageData(0, 0, 794, Math.min(canvas.height, 500)); 
         const data = imageData.data;
         let hasContent = false;
-        
-        // We look for any pixel that isn't white (255,255,255)
         for (let i = 0; i < data.length; i += 4) {
-            if (data[i] < 250 || data[i+1] < 250 || data[i+2] < 250) {
+            if (data[i] < 252 || data[i+1] < 252 || data[i+2] < 252) {
                 hasContent = true;
                 break;
             }
         }
 
         if (!hasContent) {
-            throw new Error("Validation Failed: The captured canvas is blank. Hardware rendering might be blocked.");
+            throw new Error("Validation Failed: Empty capture. The screen might be locked.");
         }
 
         // 3. CONVERT CANVAS TO PDF (Multi-page Support)
@@ -382,8 +386,8 @@ async function handleOfflineExport() {
         if (!jsPDFLib) throw new Error("PDF Library (jsPDF) not loaded. Please refresh.");
 
         const pdf = new jsPDFLib('p', 'mm', 'a4');
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
+        const pageWidth = pdf.internal.pageSize.getWidth(); // 210
+        const pageHeight = pdf.internal.pageSize.getHeight(); // 297
         
         const imgProps = pdf.getImageProperties(imgData);
         const imgHeightMm = (imgProps.height * pageWidth) / imgProps.width;
