@@ -222,23 +222,29 @@
 
     /* Policy Block */
     .policy-container {
-      background: #ffffff;
-      border: 2px solid #f1f5f9;
-      border-radius: 16px;
-      padding: 25px;
-      padding-left: 45px; /* Indentation for the entire policy block */
-      page-break-before: always;
+        page-break-before: always;
+        padding-top: 20px;
     }
 
-
     .policy-title {
-      font-size: 18px;
-      font-weight: 900;
-      color: #f97316;
-      text-align: center;
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 2px dashed #fed7aa;
+        font-size: 14pt;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 30px 0 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .policy-title::after {
+        content: '';
+        flex: 1;
+        height: 2px;
+        background: #f1f5f9;
+        margin-left: 10px;
     }
 
     .policy-section { margin-bottom: 20px; }
