@@ -258,7 +258,9 @@ async function handleOfflineExport() {
     // Clone the entire body content into a temporary container in the main document
     const tempContainer = document.createElement('div');
     tempContainer.id = 'pdf-export-container';
-    tempContainer.style.cssText = 'position:absolute; left:-9999px; top:0; width:794px;'; // A4 width in px at 96dpi
+    // IMPORTANT: Must be ON-SCREEN for html2canvas to capture it!
+    // The loading overlay (z-index:9999) hides it from the user.
+    tempContainer.style.cssText = 'position:fixed; left:0; top:0; width:794px; z-index:1; overflow:visible; background:white;';
     
     // Copy all styles from the iframe into the temp container
     const iframeStyles = iframeDoc.querySelectorAll('style, link[rel="stylesheet"]');
@@ -272,23 +274,28 @@ async function handleOfflineExport() {
     styleBlock += `
         body { margin: 0; padding: 20px 30px; font-size: 11pt; }
         .page-break { page-break-before: always; break-before: page; }
+        .page-cut-label { display: none !important; }
         @media screen { .page-cut-label { display: none !important; } }
     `;
     styleBlock += '</style>';
     
     tempContainer.innerHTML = styleBlock + iframeDoc.body.innerHTML;
-    document.body.appendChild(tempContainer);
 
-    // Show a loading overlay
+    // Show loading overlay FIRST (so it covers the temp container)
     const overlay = document.createElement('div');
     overlay.id = 'pdf-loading-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
         <div style="font-size:48px;margin-bottom:16px;">📄</div>
         <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Generating PDF...</div>
         <div style="font-size:14px;opacity:0.7;">This may take a few seconds</div>
     `;
     document.body.appendChild(overlay);
+    // Append container AFTER overlay so overlay covers it
+    document.body.appendChild(tempContainer);
+
+    // Wait for images and fonts to render inside the container
+    await new Promise(r => setTimeout(r, 1500));
 
     try {
         const fileName = `UjjainTravel_${new Date().toISOString().slice(0,10)}.pdf`;
@@ -299,7 +306,15 @@ async function handleOfflineExport() {
                 margin:       [10, 10, 10, 10],  // mm: top, left, bottom, right
                 filename:     fileName,
                 image:        { type: 'jpeg', quality: 0.95 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false, 
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: 794,
+                    width: 794
+                },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak:    { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
             })
