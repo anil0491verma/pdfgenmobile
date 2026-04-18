@@ -302,16 +302,23 @@ async function handleOfflineExport() {
     finalStyles += `
         <style>
             * { animation: none !important; transition: none !important; }
-            body, html { background: #fffcf7 !important; }
+            body, html { 
+                background: #fffcf7 !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                width: 794px !important;
+            }
             .container { 
-                width: 794px !important; 
-                padding: 15mm 15mm !important; 
+                width: 100% !important; 
+                max-width: 794px !important;
+                padding: 10mm !important; 
                 margin: 0 !important; 
                 opacity: 1 !important; 
                 background: #fffcf7 !important;
                 display: block !important;
                 height: auto !important;
                 box-shadow: none !important;
+                box-sizing: border-box !important;
             }
             .page-cut-label { display: none !important; }
             .day-title, .itinerary-header { opacity: 1 !important; transform: none !important; }
