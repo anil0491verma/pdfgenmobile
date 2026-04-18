@@ -90,6 +90,10 @@ function renderForm(schema) {
   container.innerHTML = '';
   itemRowCount = 0;
 
+  // AUTO-INCREMENT BOOKING ID LOGIC
+  let lastId = parseInt(localStorage.getItem('last_ut_booking_id')) || 1098;
+  const nextBookingId = `UT-${lastId + 1}`;
+
   schema.sections.forEach((section) => {
     const sectionEl = document.createElement('div');
     sectionEl.className = 'animate-fade-in space-y-5';
@@ -108,12 +112,20 @@ function renderForm(schema) {
     }
   });
 
-  // Set defaults
+  // Set defaults and dynamic values
   schema.sections.forEach(s => {
     if (s.type === 'table') return;
     s.fields.forEach(f => {
       const el = document.getElementById(f.name);
-      if (el && f.default === 'today' && f.type === 'date') el.value = new Date().toISOString().split('T')[0];
+      if (!el) return;
+
+      if (f.name === 'booking_id') {
+          el.value = nextBookingId;
+      } else if (f.name === 'customer_phone') {
+          el.value = '+91 - ';
+      } else if (f.default === 'today' && f.type === 'date') {
+          el.value = new Date().toISOString().split('T')[0];
+      }
     });
   });
 }
@@ -341,6 +353,15 @@ async function handleOfflineExport() {
         };
 
         const pdfBlob = await html2pdf().set(options).from(exportBox).outputPdf('blob');
+
+        // INCREMENT AND SAVE BOOKING ID ON SUCCESS
+        const currentBookingId = document.getElementById('booking_id')?.value || "";
+        if (currentBookingId.startsWith('UT-')) {
+            const numericPart = parseInt(currentBookingId.split('-')[1]);
+            if (!isNaN(numericPart)) {
+                localStorage.setItem('last_ut_booking_id', numericPart);
+            }
+        }
 
         if (pdfBlob.size < 3000) {
             throw new Error("PDF generated but appears empty (" + pdfBlob.size + " bytes).");
