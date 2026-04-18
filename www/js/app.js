@@ -306,18 +306,49 @@ async function handleOfflineExport() {
             .from(tempContainer)
             .outputPdf('blob');
 
-        // Use Android's native Share sheet so the user picks where to save
-        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        // Convert blob to base64 for Capacitor Filesystem
+        const base64Data = await blobToBase64(pdfBlob);
 
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-            // Android native share sheet — lets user Save to Files, WhatsApp, Email, etc.
-            await navigator.share({
-                title: 'UjjainTravel Itinerary',
-                text: 'Your travel document is ready',
-                files: [pdfFile]
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            // === NATIVE ANDROID: Write directly to Downloads folder ===
+            const { Filesystem, Directory } = window.Capacitor.Plugins;
+
+            // Save PDF to the device Downloads folder
+            const savedFile = await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: 'DOCUMENTS',  // Visible in Files app
+                recursive: true
             });
+
+            overlay.innerHTML = `
+                <div style="font-size:48px;margin-bottom:16px;">✅</div>
+                <div style="font-size:20px;font-weight:700;margin-bottom:12px;">PDF Saved!</div>
+                <div style="font-size:14px;opacity:0.8;margin-bottom:20px;">Saved to Documents folder</div>
+                <button id="sharePdfBtn" style="background:linear-gradient(135deg,#f97316,#ef4444);color:white;border:none;padding:14px 28px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;">
+                    📤 Share via WhatsApp / Email
+                </button>
+            `;
+
+            // Share button → opens native share sheet (WhatsApp, email, etc.)
+            document.getElementById('sharePdfBtn').addEventListener('click', async () => {
+                try {
+                    const { Share } = window.Capacitor.Plugins;
+                    await Share.share({
+                        title: 'UjjainTravel Itinerary',
+                        text: 'Your travel document is ready',
+                        url: savedFile.uri,
+                        dialogTitle: 'Share your itinerary'
+                    });
+                } catch (e) {
+                    alert('Share failed: ' + e.message);
+                }
+            });
+
+            setTimeout(() => overlay.remove(), 8000);
+
         } else {
-            // Fallback for desktop browsers
+            // === DESKTOP BROWSER FALLBACK ===
             const url = URL.createObjectURL(pdfBlob);
             const a = document.createElement('a');
             a.href = url;
@@ -325,19 +356,18 @@ async function handleOfflineExport() {
             document.body.appendChild(a);
             a.click();
             setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
-        }
 
-        // Show success message
-        overlay.innerHTML = `
-            <div style="font-size:48px;margin-bottom:16px;">✅</div>
-            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">PDF Ready!</div>
-            <div style="font-size:14px;opacity:0.7;">Save it from the share menu</div>
-        `;
-        setTimeout(() => overlay.remove(), 2500);
+            overlay.innerHTML = `
+                <div style="font-size:48px;margin-bottom:16px;">✅</div>
+                <div style="font-size:20px;font-weight:700;margin-bottom:8px;">PDF Downloaded!</div>
+                <div style="font-size:14px;opacity:0.7;">Check your Downloads folder</div>
+            `;
+            setTimeout(() => overlay.remove(), 2500);
+        }
 
     } catch (err) {
         overlay.remove();
-        alert('PDF Generation Error: ' + err.message);
+        alert('PDF Generation Error: ' + (err.message || err));
     } finally {
         // Cleanup temp container
         tempContainer.remove();
@@ -345,6 +375,20 @@ async function handleOfflineExport() {
         iframeDoc.body.contentEditable = true;
         iframeDoc.body.style.cursor = 'text';
     }
+}
+
+// Helper: Convert Blob to base64 string (without data URL prefix)
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            // Remove the "data:application/pdf;base64," prefix
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
 }
 
 function showToast(msg, type = 'info') { alert(msg); }
