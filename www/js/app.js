@@ -589,6 +589,8 @@ function setupAutoCalculation() {
             const withTax = Math.round(baseTotal * 1.10);
             // Format as Indian Currency String (e.g. 15,500)
             totalEl.value = withTax.toLocaleString('en-IN');
+        } else {
+            totalEl.value = "";
         }
     };
 
