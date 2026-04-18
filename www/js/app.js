@@ -258,43 +258,48 @@ function closePreviewModal() {
 async function handleOfflineExport() {
     const iframe = document.getElementById('previewModalIframe');
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    const container = iframeDoc.querySelector('.container');
     
-    // 1. Show high-fidelity overlay
+    if (!container) { alert('No itinerary content found to export.'); return; }
+
+    // 1. Show loading overlay
     const overlay = document.createElement('div');
     overlay.id = 'pdf-loading-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
         <div style="font-size:64px;margin-bottom:20px;">📄</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Capturing Perfect Styles...</div>
-        <div style="font-size:14px;opacity:0.6;">Indenting layout and applying colors</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Capturing Itinerary</div>
+        <div style="font-size:14px;opacity:0.6;">Generating high-resolution document...</div>
     `;
     document.body.appendChild(overlay);
 
-    // 2. Extract content AND styles from iframe
-    // We must put them in the MAIN document for html2pdf to see them correctly
-    const content = iframeDoc.querySelector('.container').cloneNode(true);
-    
-    // Clean content
-    content.querySelectorAll('.page-cut-label').forEach(el => el.remove());
-    content.style.transform = 'none'; // Remove preview scaling
-    content.style.width = '794px';
-    content.style.margin = '0 auto';
-    content.style.padding = '15mm 20mm'; // Left/Right Indentation
-    content.style.background = 'white';
+    // 2. THE "TRUE SWAP" METHOD
+    // We move the ACTUAL WORKING container out of the iframe
+    // into the main document so the PDF engine sees it as a real, styled element.
+    const originalParent = container.parentNode;
+    const originalNextSibling = container.nextSibling;
+    const originalTransform = container.style.transform;
 
-    const tempWrapper = document.createElement('div');
-    // MUST BE ON-SCREEN for html2canvas. Hidden behind the z-index 99999 overlay.
-    tempWrapper.style.cssText = 'position:fixed;left:0;top:-1000px;width:794px;z-index:99998;background:white;transform:none;';
-    // Actually, setting top:0 can sometimes cause scroll jumps or visible flashes if overlay loads late. 
-    // Wait, -1000px might also fail. Let's make it top:0 but visibility:visible.
-    tempWrapper.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:99998;background:white;';
-    // Copy Styles
+    // Reset styles for export
+    container.style.transform = 'none';
+    container.style.width = '210mm'; // A4 width
+    container.style.margin = '0';
+    container.style.padding = '15mm 20mm';
+    container.style.background = 'white';
+    container.style.position = 'fixed';
+    container.style.left = '0';
+    container.style.top = '0';
+    container.style.zIndex = '99998'; // Just behind overlay
+
+    // Copy iframe head styles into main doc temporarily
     const styleLinks = Array.from(iframeDoc.querySelectorAll('style, link[rel="stylesheet"]'))
-        .map(s => s.outerHTML).join('\n');
-    
-    tempWrapper.innerHTML = styleLinks + content.outerHTML;
-    document.body.appendChild(tempWrapper);
+        .map(s => s.cloneNode(true));
+    styleLinks.forEach(s => document.head.appendChild(s));
 
+    // Move container to main body
+    document.body.appendChild(container);
+
+    // Short delay for layout recalculation
     await new Promise(r => setTimeout(r, 2000));
 
     try {
@@ -308,14 +313,91 @@ async function handleOfflineExport() {
                 scale: 2,
                 useCORS: true, 
                 backgroundColor: '#ffffff',
-                width: 794,
-                windowWidth: 794
+                width: 794, // 210mm at 96dpi
+                windowWidth: 794,
+                scrollY: 0,
+                scrollX: 0
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: ['css', 'legacy'] }
         };
 
-        const pdfBlob = await html2pdf().set(options).from(tempWrapper).outputPdf('blob');
+        const pdfBlob = await html2pdf().set(options).from(container).outputPdf('blob');
+        
+        // Convert to base64
+        const base64Data = await blobToBase64(pdfBlob);
+
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { Filesystem, Share } = window.Capacitor.Plugins;
+            const Dir = { Documents: 'DOCUMENTS', Cache: 'CACHE' };
+            let savedFile;
+
+            try {
+                savedFile = await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Dir.Documents,
+                    recursive: true
+                });
+            } catch (err) {
+                savedFile = await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Dir.Cache,
+                    recursive: true
+                });
+            }
+
+            // ... success UI and Share logic ...
+            overlay.innerHTML = `
+                <div style="font-size:48px;margin-bottom:16px;">✅</div>
+                <div style="font-size:20px;font-weight:700;margin-bottom:12px;">PDF is Ready!</div>
+                <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:280px;">
+                    <button id="sharePdfBtn" style="background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;padding:16px;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">
+                        <i class="fab fa-whatsapp"></i> Share on WhatsApp
+                    </button>
+                    <button id="closeOverlayBtn" style="background:rgba(255,255,255,0.1);color:white;border:none;padding:10px;border-radius:10px;font-size:14px;cursor:pointer;">Close</button>
+                </div>
+            `;
+
+            const triggerShare = async () => {
+                await Share.share({ title: 'Itinerary', url: savedFile.uri });
+            };
+            document.getElementById('sharePdfBtn').onclick = triggerShare;
+            document.getElementById('closeOverlayBtn').onclick = () => overlay.remove();
+            setTimeout(triggerShare, 500);
+        } else {
+            // Desktop fallback
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            overlay.remove();
+        }
+
+    } catch (err) {
+        alert('Export Err: ' + err);
+        overlay.remove();
+    } finally {
+        // RESTORE EVERYTHING
+        container.style.transform = originalTransform;
+        container.style.position = '';
+        container.style.left = '';
+        container.style.top = '';
+        container.style.zIndex = '';
+        
+        // Put it back in the iframe
+        if (originalNextSibling) {
+            originalParent.insertBefore(container, originalNextSibling);
+        } else {
+            originalParent.appendChild(container);
+        }
+
+        // Remove temporary style clones
+        styleLinks.forEach(s => s.remove());
+    }
+}
         
         // Convert blob to base64 for Capacitor Filesystem
         const base64Data = await blobToBase64(pdfBlob);
