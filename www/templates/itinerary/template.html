@@ -490,7 +490,7 @@
     <table class="breakup-table">
       <thead>
         <tr>
-          <th>Service Description</th>
+          <th>Price Breakup</th>
           <th style="text-align: right;">Amount (Rs)</th>
         </tr>
       </thead>
@@ -529,6 +529,14 @@
         <tr>
           <td><div class="breakup-label"><i class="fas fa-plus-circle breakup-icon"></i> {{ misc_name | default('Miscellaneous Charges') }}</div></td>
           <td class="breakup-value">Rs. {{ misc_price }}</td>
+        </tr>
+        {% endif %}
+        
+        <!-- SERVICE TAX ROW -->
+        {% if service_charge %}
+        <tr style="background: #fffcf0;">
+          <td><div class="breakup-label" style="color: #92400e;"><i class="fas fa-plus-square breakup-icon" style="color: #d97706;"></i> Service Charge (10%)</div></td>
+          <td class="breakup-value" style="color: #d97706;">Rs. {{ service_charge }}</td>
         </tr>
         {% endif %}
       </tbody>

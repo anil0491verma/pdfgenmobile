@@ -238,10 +238,19 @@ async function renderTemplateOffline(templateName, data) {
     const res = await fetch(`templates/${templateName}/template.html`);
     let html = await res.text();
 
-    // Replicate Python Logic
-    if (templateName === "itinerary" && data["itinerary_content"]) {
-        data["itinerary_content"] = formatItineraryContent(data["itinerary_content"]);
+    // Handle Itinerary Formatting
+    if (templateName === "itinerary") {
+        if (data["itinerary_content"]) data["itinerary_content"] = formatItineraryContent(data["itinerary_content"]);
+        
+        // Auto-calculate service tax for display if breakup is shown
+        if (data["show_breakup"]) {
+            const pFields = ['cab_price', 'arti_price', 'pooja_price', 'tickets_price', 'hotel_price', 'misc_price'];
+            let subVal = 0;
+            pFields.forEach(f => subVal += parseFloat(data[f]) || 0);
+            data["service_charge"] = Math.round(subVal * 0.10).toLocaleString('en-IN');
+        }
     }
+
     data["logo_data_url"] = logoBase64;
 
     // Simple Jinja Injection Regex Compiler
