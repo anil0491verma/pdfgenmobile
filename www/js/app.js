@@ -124,6 +124,7 @@ function renderForm(schema) {
     };
     toggleBtn.addEventListener('change', updateVisibility);
     updateVisibility();
+    setupAutoCalculation();
   }
 
   // Set defaults and dynamic values
@@ -549,6 +550,33 @@ function blobToBase64(blob) {
         reader.onerror = reject;
         reader.readAsDataURL(blob);
     });
+}
+
+function setupAutoCalculation() {
+    const fields = ['cab_price', 'arti_price', 'pooja_price', 'tickets_price', 'hotel_price', 'misc_price'];
+    const totalEl = document.getElementById('total_amount');
+    const toggleBtn = document.getElementById('show_breakup');
+
+    const calculate = () => {
+        if (!toggleBtn || !toggleBtn.checked) return;
+
+        let baseTotal = 0;
+        fields.forEach(f => {
+            const val = parseFloat(document.getElementById(f)?.value) || 0;
+            baseTotal += val;
+        });
+
+        if (baseTotal > 0) {
+            const withTax = Math.round(baseTotal * 1.10);
+            // Format as Indian Currency String (e.g. 15,500)
+            totalEl.value = withTax.toLocaleString('en-IN');
+        }
+    };
+
+    fields.forEach(f => {
+        document.getElementById(f)?.addEventListener('input', calculate);
+    });
+    toggleBtn?.addEventListener('change', calculate);
 }
 
 function showToast(msg, type = 'info') { alert(msg); }
