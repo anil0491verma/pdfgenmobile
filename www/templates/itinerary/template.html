@@ -287,6 +287,56 @@
     .important-note { background: #fffef2; border: 1px solid #fef3c7; padding: 12px; border-radius: 8px; margin: 10px 0; }
     .important-note strong { color: #92400e; }
 
+    /* Price Card Stylization */
+    .price-card {
+        background: linear-gradient(135deg, #fff7ed 0%, #fff 100%);
+        border: 2px solid #f97316;
+        border-radius: 16px;
+        padding: 24px;
+        margin: 40px 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(249, 115, 22, 0.1);
+    }
+    .price-card::before {
+        content: 'PKN';
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        font-size: 60pt;
+        font-weight: 900;
+        color: #f97316;
+        opacity: 0.03;
+        z-index: 0;
+    }
+    .price-label {
+        font-size: 10pt;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #64748b;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+    .price-value {
+        font-size: 26pt;
+        font-weight: 900;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    .price-currency { color: #f97316; font-size: 18pt; }
+    .price-suffix { font-size: 12pt; color: #94a3b8; font-weight: 400; margin-top: 5px; }
+    .service-charge-note {
+        font-size: 8pt;
+        color: #94a3b8;
+        font-weight: 600;
+        margin-top: 12px;
+        font-style: italic;
+    }
+
       .footer-signature {
       text-align: center;
       margin-top: 40px;
@@ -404,6 +454,20 @@
     <!-- MAIN ITINERARY -->
     <div class="section-header">📍 Detailed Tour Plan</div>
     <div class="itinerary-body">{{ itinerary_content | default('Plan details will be finalized shortly.') | safe }}</div>
+
+    {% if total_amount %}
+    <div class="price-card">
+      <div class="price-label">Total Package Cost</div>
+      <div class="price-value">
+        <span class="price-currency">Rs.</span>
+        <span>{{ total_amount }}</span>
+        <span class="price-suffix">/- only</span>
+      </div>
+      <div class="service-charge-note">
+        (Inclusive of 10% Service Charge)
+      </div>
+    </div>
+    {% endif %}
 
     <!-- POLICIES POSTER PAGE -->
     <div class="policy-container">

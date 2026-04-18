@@ -214,11 +214,20 @@ async function renderTemplateOffline(templateName, data) {
 
     // Simple Jinja Injection Regex Compiler
     for (const [key, value] of Object.entries(data)) {
-        const regex = new RegExp(`{{\\s*${key}\\s*(?:\\|.*?)*}}`, 'g');
-        html = html.replace(regex, value);
+        // Handle simple {% if key %} blocks
+        const ifRegex = new RegExp(`{%\\s*if\\s*${key}\\s*%}([\\s\\S]*?){%\\s*endif\\s*%}`, 'g');
+        if (!value || value.toString().trim() === "") {
+            html = html.replace(ifRegex, '');
+        } else {
+            html = html.replace(ifRegex, '$1');
+        }
+
+        const varRegex = new RegExp(`{{\\s*${key}\\s*(?:\\|.*?)*}}`, 'g');
+        html = html.replace(varRegex, value);
     }
     
-    // Fallback cleanup
+    // Fallback cleanup for any remaining tags
+    html = html.replace(/{%\\s*if\\s*.*?\\s*%}[\\s\\S]*?{%\\s*endif\\s*%}/g, '');
     html = html.replace(/{{\\s*.*\\s*(?:\\|.*?)*}}/g, '');
     return html;
 }

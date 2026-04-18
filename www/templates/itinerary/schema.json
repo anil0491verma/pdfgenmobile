@@ -15,7 +15,8 @@
         { "name": "tour_name", "label": "Tour Title", "type": "text", "required": true, "default": "Ujjain Mahakaleshwar & Omkareshwar Tour" },
         { "name": "start_date", "label": "Journey Start", "type": "date", "required": true, "default": "2026-04-04" },
         { "name": "end_date", "label": "Journey End", "type": "date", "required": true, "default": "2026-04-06" },
-        { "name": "num_pax", "label": "Number of Passengers", "type": "text", "required": false, "default": "2 Adults" }
+        { "name": "num_pax", "label": "Number of Passengers", "type": "text", "required": false, "default": "2 Adults" },
+        { "name": "total_amount", "label": "Total Package Amount (Rs)", "type": "text", "required": false, "placeholder": "e.g. 15,500" }
 
       ]
     },
