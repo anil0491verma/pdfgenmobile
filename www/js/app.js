@@ -300,17 +300,20 @@ async function handleOfflineExport() {
 
     // FORCE VISIBILITY: Disable animations and force opacity: 1
     finalStyles += `
+        <meta name="viewport" content="width=794, initial-scale=1.0, maximum-scale=1.0">
         <style>
             * { animation: none !important; transition: none !important; }
             html, body { 
                 background: #fffcf7 !important; 
                 margin: 0 !important; 
                 padding: 0 !important; 
-                width: 794px !important; /* Exactly 210mm @ 96dpi */
+                width: 794px !important;
+                min-width: 794px !important;
                 overflow: visible !important;
             }
             .container { 
                 width: 794px !important; 
+                min-width: 794px !important;
                 padding: 12mm !important; 
                 margin: 0 !important; 
                 opacity: 1 !important; 
