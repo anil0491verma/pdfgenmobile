@@ -336,23 +336,44 @@ async function handleOfflineExport() {
 
     try {
         const fileName = `UT_Itinerary_${Date.now()}.pdf`;
-        const options = {
-            margin: 0,
-            filename: fileName,
-            image: { type: 'jpeg', quality: 1.0 },
-            html2canvas: { 
-                scale: 1, 
-                useCORS: true, 
-                backgroundColor: '#ffffff',
-                width: 794,
-                scrollY: 0,
-                scrollX: 0
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] }
-        };
+        
+        // 1. RAW CANVAS CAPTURE (For Pixel Validation)
+        const canvas = await html2canvas(exportBox, {
+            scale: 1,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            width: 794,
+            height: exportBox.scrollHeight,
+            logging: false
+        });
 
-        const pdfBlob = await html2pdf().set(options).from(exportBox).outputPdf('blob');
+        // 2. PIXEL VALIDATOR: Check if the canvas is just a white/transparent sheet
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, Math.min(canvas.height, 1000)); // Check first 1000px
+        const data = imageData.data;
+        let hasContent = false;
+        
+        // We look for any pixel that isn't white (255,255,255)
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i] < 250 || data[i+1] < 250 || data[i+2] < 250) {
+                hasContent = true;
+                break;
+            }
+        }
+
+        if (!hasContent) {
+            throw new Error("Validation Failed: The captured canvas is blank. Hardware rendering might be blocked.");
+        }
+
+        // 3. CONVERT CANVAS TO PDF
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        const pdfBlob = pdf.output('blob');
 
         // INCREMENT AND SAVE BOOKING ID ON SUCCESS
         const currentBookingId = document.getElementById('booking_id')?.value || "";
@@ -364,7 +385,7 @@ async function handleOfflineExport() {
         }
 
         if (pdfBlob.size < 3000) {
-            throw new Error("PDF generated but appears empty (" + pdfBlob.size + " bytes).");
+            throw new Error("PDF generated but size is invalid (" + pdfBlob.size + " bytes).");
         }
         
         // Convert to base64
