@@ -13,7 +13,8 @@
   "dependencies": {
     "@capacitor/android": "^8.3.1",
     "@capacitor/core": "^8.3.1",
-    "@capgo/capacitor-pdf-generator": "^8.0.24"
+    "@capgo/capacitor-pdf-generator": "^8.0.24",
+    "html2pdf.js": "^0.14.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.1"
