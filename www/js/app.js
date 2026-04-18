@@ -398,39 +398,6 @@ async function handleOfflineExport() {
         styleLinks.forEach(s => s.remove());
     }
 }
-        
-        // Convert blob to base64 for Capacitor Filesystem
-        const base64Data = await blobToBase64(pdfBlob);
-
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            const { Filesystem, Share } = window.Capacitor.Plugins;
-            let savedFile;
-
-            // Manual Directory constants for safety
-            const Dir = {
-                Documents: 'DOCUMENTS',
-                Cache: 'CACHE'
-            };
-
-            try {
-                // Try writing to Documents folder
-                savedFile = await Filesystem.writeFile({
-                    path: fileName,
-                    data: base64Data,
-                    directory: Dir.Documents,
-                    recursive: true
-                });
-            } catch (err) {
-                console.warn('Documents access failed, falling back to Cache:', err);
-                // FALLBACK: Save to Cache (Always works without permissions)
-                savedFile = await Filesystem.writeFile({
-                    path: fileName,
-                    data: base64Data,
-                    directory: Dir.Cache,
-                    recursive: true
-                });
-            }
-
 
 // Helper: Convert Blob to base64 string (without data URL prefix)
 function blobToBase64(blob) {
