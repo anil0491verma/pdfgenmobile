@@ -285,7 +285,7 @@ async function handleOfflineExport() {
 
     const exportBox = document.createElement('div');
     exportBox.id = "final-export-box";
-    exportBox.style.cssText = 'position:absolute;left:0;top:-10000px;width:794px;background:white;visibility:visible;';
+    exportBox.style.cssText = 'position:absolute;left:0;top:-10000px;width:794px;background:#fffcf7;visibility:visible;';
     
     let finalStyles = '';
     iframeDoc.querySelectorAll('style').forEach(s => { finalStyles += `<style>${s.innerHTML}</style>`; });
@@ -302,15 +302,16 @@ async function handleOfflineExport() {
     finalStyles += `
         <style>
             * { animation: none !important; transition: none !important; }
-            body { background: #fffcf7 !important; }
+            body, html { background: #fffcf7 !important; }
             .container { 
                 width: 794px !important; 
-                padding: 20mm !important; 
+                padding: 15mm 15mm !important; 
                 margin: 0 !important; 
                 opacity: 1 !important; 
                 background: #fffcf7 !important;
                 display: block !important;
                 height: auto !important;
+                box-shadow: none !important;
             }
             .page-cut-label { display: none !important; }
             .day-title, .itinerary-header { opacity: 1 !important; transform: none !important; }
@@ -341,9 +342,9 @@ async function handleOfflineExport() {
         
         // 1. RAW CANVAS CAPTURE (For Pixel Validation)
         const canvas = await html2canvas(exportBox, {
-            scale: 1,
+            scale: 2, // Upped scale for better clarity on mobile
             useCORS: true,
-            backgroundColor: '#ffffff',
+            backgroundColor: '#fffcf7',
             width: 794,
             height: exportBox.scrollHeight,
             logging: false
