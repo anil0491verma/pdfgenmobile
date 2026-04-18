@@ -328,39 +328,50 @@ async function handleOfflineExport() {
             // === NATIVE ANDROID: Write directly to Downloads folder ===
             const { Filesystem, Directory } = window.Capacitor.Plugins;
 
-            // Save PDF to the device Downloads folder
+            // Save PDF to the device Documents folder
             const savedFile = await Filesystem.writeFile({
                 path: fileName,
                 data: base64Data,
-                directory: 'DOCUMENTS',  // Visible in Files app
+                directory: 'DOCUMENTS',
                 recursive: true
             });
 
             overlay.innerHTML = `
                 <div style="font-size:48px;margin-bottom:16px;">✅</div>
-                <div style="font-size:20px;font-weight:700;margin-bottom:12px;">PDF Saved!</div>
-                <div style="font-size:14px;opacity:0.8;margin-bottom:20px;">Saved to Documents folder</div>
-                <button id="sharePdfBtn" style="background:linear-gradient(135deg,#f97316,#ef4444);color:white;border:none;padding:14px 28px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;">
-                    📤 Share via WhatsApp / Email
-                </button>
+                <div style="font-size:20px;font-weight:700;margin-bottom:12px;">PDF Created & Saved!</div>
+                <div style="font-size:14px;opacity:0.8;margin-bottom:20px;">Saved to internal Documents</div>
+                
+                <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:280px;">
+                    <button id="sharePdfBtn" style="background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;padding:16px;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 20px rgba(37,211,102,0.2);">
+                        <i class="fab fa-whatsapp" style="font-size:20px;"></i> Share on WhatsApp
+                    </button>
+                    <button id="otherShareBtn" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);padding:12px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;">
+                        More Options...
+                    </button>
+                </div>
             `;
 
-            // Share button → opens native share sheet (WhatsApp, email, etc.)
-            document.getElementById('sharePdfBtn').addEventListener('click', async () => {
+            const triggerShare = async () => {
                 try {
                     const { Share } = window.Capacitor.Plugins;
                     await Share.share({
                         title: 'UjjainTravel Itinerary',
-                        text: 'Your travel document is ready',
+                        text: 'Sharing travel itinerary from UjjainTravel',
                         url: savedFile.uri,
-                        dialogTitle: 'Share your itinerary'
+                        dialogTitle: 'Share via'
                     });
-                } catch (e) {
-                    alert('Share failed: ' + e.message);
-                }
-            });
+                } catch (e) { console.error('Share error', e); }
+            };
 
-            setTimeout(() => overlay.remove(), 8000);
+            // Auto-trigger share sheet immediately
+            setTimeout(triggerShare, 500);
+
+            // Manual triggers
+            document.getElementById('sharePdfBtn').onclick = triggerShare;
+            document.getElementById('otherShareBtn').onclick = triggerShare;
+
+            // Keep overlay visible longer for user to interact
+            setTimeout(() => { if(document.body.contains(overlay)) overlay.remove(); }, 15000);
 
         } else {
             // === DESKTOP BROWSER FALLBACK ===
