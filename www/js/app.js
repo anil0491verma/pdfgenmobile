@@ -260,36 +260,51 @@ async function handleOfflineExport() {
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     const originalContainer = iframeDoc.querySelector('.container');
     
-    if (!originalContainer) { alert('No itinerary content found.'); return; }
+    if (!originalContainer) { alert('No content found to export!'); return; }
 
     // SHOW LOADING OVERLAY
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
         <div style="font-size:64px;margin-bottom:20px;">📄</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Creating PDF</div>
-        <div style="font-size:14px;opacity:0.6;">Optimizing for your S23 hardware...</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Processing PDF</div>
+        <div style="font-size:14px;opacity:0.6;text-align:center;padding:0 20px;">Applying spiritual themes and premium styles...</div>
     `;
     document.body.appendChild(overlay);
 
-    // CREATE A DEDICATED EXPORT BOX IN MAIN BODY
-    // This avoids all iframe isolation issues
+    // CREATE A "PATH-PROOF" EXPORT BOX
     const exportBox = document.createElement('div');
-    exportBox.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:-1;visibility:visible;background:white;';
+    // Position it TOPMOST but behind the loading overlay
+    exportBox.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:999998;background:white;visibility:visible;';
     
-    // Copy Styles and Content
-    const styles = Array.from(iframeDoc.querySelectorAll('style, link')).map(s => s.outerHTML).join('');
-    exportBox.innerHTML = styles + originalContainer.outerHTML;
+    // INLINE ALL CSS (Fixes the "../../css" path breakage issue)
+    let inlinedStyles = '';
+    try {
+        const sheets = Array.from(iframeDoc.styleSheets);
+        for (const sheet of sheets) {
+            try {
+                const rules = Array.from(sheet.cssRules || sheet.rules).map(r => r.cssText).join('\n');
+                inlinedStyles += `<style>${rules}</style>`;
+            } catch (e) { /* Fallback for potential security restrictions */ }
+        }
+        // If inlining failed, fallback to outerHTML of tags
+        if (!inlinedStyles) {
+            inlinedStyles = Array.from(iframeDoc.querySelectorAll('style, link')).map(s => s.outerHTML).join('');
+        }
+    } catch (e) { console.warn("CSS Inlining failed", e); }
+
+    exportBox.innerHTML = inlinedStyles + originalContainer.outerHTML;
     document.body.appendChild(exportBox);
 
     const container = exportBox.querySelector('.container');
     container.style.transform = 'none';
     container.style.width = '794px';
-    container.style.padding = '15mm 20mm'; // Your requested indentation
+    container.style.padding = '15mm 20mm';
     container.style.margin = '0';
+    container.style.boxShadow = 'none';
 
-    // IMPORTANT: Wait for styles and layout (3 seconds for S23)
-    await new Promise(r => setTimeout(r, 3000));
+    // Wait for layout
+    await new Promise(r => setTimeout(r, 2000));
 
     try {
         const fileName = `UT_Itinerary_${Date.now()}.pdf`;
@@ -297,22 +312,26 @@ async function handleOfflineExport() {
         const options = {
             margin:       0,
             filename:     fileName,
-            image:        { type: 'jpeg', quality: 0.98 },
+            image:        { type: 'jpeg', quality: 1.0 },
             html2canvas:  { 
-                scale: 1, // CRITICAL: Higher than 1 on S23 exceeds canvas memory for 5+ pages
+                scale: 1, // S23 Safe Scale
                 useCORS: true, 
                 backgroundColor: '#ffffff',
                 width: 794,
                 windowWidth: 794,
                 scrollY: 0,
-                scrollX: 0,
-                logging: false
+                scrollX: 0
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: ['css', 'legacy'] }
         };
 
         const pdfBlob = await html2pdf().set(options).from(exportBox).outputPdf('blob');
+
+        // VERIFICATION: Check if blob is far too small (indicates a blank page)
+        if (pdfBlob.size < 2000) {
+            throw new Error("Generated PDF is too small. Something went wrong with the capture.");
+        }
         
         // Convert to base64
         const base64Data = await blobToBase64(pdfBlob);
