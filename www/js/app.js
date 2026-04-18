@@ -149,18 +149,18 @@ function renderField(field) {
   let inputHtml = "";
   
   if (field.type === 'textarea') {
-    inputHtml = `<textarea id="${field.name}" name="${field.name}" class="w-full p-3 border rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" rows="4" ${field.required ? 'required' : ''}>${field.default || ''}</textarea>`;
+    inputHtml = `<textarea id="${field.name}" name="${field.name}" class="w-full p-2.5 text-sm border rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" rows="4" ${field.required ? 'required' : ''}>${field.default || ''}</textarea>`;
   } else if (field.type === 'checkbox') {
-    inputHtml = `<div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-        <input type="checkbox" id="${field.name}" name="${field.name}" class="w-6 h-6 accent-brand-500" ${field.default ? 'checked' : ''} />
-        <span class="text-sm font-medium text-slate-600">Enable this option</span>
+    inputHtml = `<div class="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-200">
+        <input type="checkbox" id="${field.name}" name="${field.name}" class="w-5 h-5 accent-brand-500" ${field.default ? 'checked' : ''} />
+        <span class="text-xs font-semibold text-slate-600">Enable</span>
     </div>`;
   } else {
-    inputHtml = `<input type="${field.type || 'text'}" id="${field.name}" name="${field.name}" class="w-full p-3 border rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" ${field.required ? 'required' : ''} value="${field.default || ''}" placeholder="${field.placeholder || ''}" />`;
+    inputHtml = `<input type="${field.type || 'text'}" id="${field.name}" name="${field.name}" class="w-full p-2.5 text-sm border rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" ${field.required ? 'required' : ''} value="${field.default || ''}" placeholder="${field.placeholder || ''}" />`;
   }
   
   return `<div class="field-container ${isFullWidth ? 'col-span-2' : 'col-span-1'}">
-    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" for="${field.name}">${field.label}</label>
+    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1" for="${field.name}">${field.label}</label>
     ${inputHtml}
   </div>`;
 }
