@@ -401,25 +401,14 @@ async function handleOfflineExport() {
         }
 
     } catch (err) {
-        alert('Export Err: ' + err);
-        overlay.remove();
+        console.error('Export Error:', err);
+        alert('Export Err: ' + err.message);
     } finally {
-        // RESTORE EVERYTHING
-        container.style.transform = originalTransform;
-        container.style.position = '';
-        container.style.left = '';
-        container.style.top = '';
-        container.style.zIndex = '';
-        
-        // Put it back in the iframe
-        if (originalNextSibling) {
-            originalParent.insertBefore(container, originalNextSibling);
-        } else {
-            originalParent.appendChild(container);
+        // CLEANUP
+        if (exportBox) exportBox.remove();
+        if (overlay && !document.getElementById('sharePdfBtn')) {
+            overlay.remove();
         }
-
-        // Remove temporary style clones
-        styleLinks.forEach(s => s.remove());
     }
 }
 
