@@ -249,45 +249,41 @@ async function handleOfflineExport() {
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     
     // Clean up editing attributes
-    // Prepare iframe for capture
+    // Prepare iframe for capture - FORCE DESKTOP WIDTH for rendering
+    // This ensures all badges, tabs, and gradients render at high-fidelity
+    const originalIframeWidth = iframe.style.width;
+    iframe.style.width = '794px'; 
+    
     iframeDoc.body.removeAttribute('contenteditable');
     iframeDoc.body.style.cursor = '';
     iframeDoc.querySelectorAll('.page-cut-label').forEach(el => el.remove());
     
-    // Inject minimal overrides to hide preview-only visual aids
     const printStyles = iframeDoc.createElement('style');
     printStyles.id = 'pdf-print-overrides';
     printStyles.textContent = `
-        /* Hide preview helpers */
         body::before { display: none !important; }
         .container { 
             background-image: none !important; 
             box-shadow: none !important; 
-            margin: 0 auto !important;
+            margin: 0 !important;
             border: none !important;
+            width: 794px !important;
+            padding: 20mm !important;
         }
-        /* Ensure background colors and gradients render */
         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     `;
     iframeDoc.head.appendChild(printStyles);
 
-    // Show loading overlay
     const overlay = document.createElement('div');
     overlay.id = 'pdf-loading-overlay';
-    overlay.style.cssText = `
-        position: fixed; inset: 0; z-index: 99999;
-        background: rgba(15, 23, 42, 0.98);
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        color: white; font-family: 'Inter', sans-serif;
-    `;
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
         <div style="font-size:64px;margin-bottom:20px;">📄</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Finalizing PDF...</div>
-        <div style="font-size:14px;opacity:0.6;">Matching preview styles and colors</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Capturing All Styles...</div>
+        <div style="font-size:14px;opacity:0.6;">Generating high-fidelity 5-page PDF</div>
     `;
     document.body.appendChild(overlay);
 
-    // Give the engine time to process
     await new Promise(r => setTimeout(r, 2000));
 
     try {
@@ -303,14 +299,18 @@ async function handleOfflineExport() {
                 useCORS: true, 
                 logging: false,
                 letterRendering: true,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                width: 794,
+                windowWidth: 794
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: ['css', 'legacy'] }
         };
 
-        // Capture EXACTLY the '.container' (the simulated A4 paper)
         const pdfBlob = await html2pdf().set(options).from(element).outputPdf('blob');
+        
+        // Restore iframe width
+        iframe.style.width = originalIframeWidth;
 
         // Convert blob to base64 for Capacitor Filesystem
         const base64Data = await blobToBase64(pdfBlob);
