@@ -302,13 +302,13 @@ async function handleOfflineExport() {
     finalStyles += `
         <style>
             * { animation: none !important; transition: none !important; }
-            body { background: #ffffff !important; }
+            body { background: #fffcf7 !important; }
             .container { 
                 width: 794px !important; 
                 padding: 20mm !important; 
                 margin: 0 !important; 
                 opacity: 1 !important; 
-                background: #ffffff !important;
+                background: #fffcf7 !important;
                 display: block !important;
                 height: auto !important;
             }
