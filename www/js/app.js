@@ -283,8 +283,11 @@ async function handleOfflineExport() {
     content.style.background = 'white';
 
     const tempWrapper = document.createElement('div');
-    tempWrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;';
-    
+    // MUST BE ON-SCREEN for html2canvas. Hidden behind the z-index 99999 overlay.
+    tempWrapper.style.cssText = 'position:fixed;left:0;top:-1000px;width:794px;z-index:99998;background:white;transform:none;';
+    // Actually, setting top:0 can sometimes cause scroll jumps or visible flashes if overlay loads late. 
+    // Wait, -1000px might also fail. Let's make it top:0 but visibility:visible.
+    tempWrapper.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:99998;background:white;';
     // Copy Styles
     const styleLinks = Array.from(iframeDoc.querySelectorAll('style, link[rel="stylesheet"]'))
         .map(s => s.outerHTML).join('\n');
