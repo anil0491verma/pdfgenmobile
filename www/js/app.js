@@ -267,60 +267,75 @@ async function handleOfflineExport() {
     overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
         <div style="font-size:64px;margin-bottom:20px;">📄</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Processing PDF</div>
-        <div style="font-size:14px;opacity:0.6;text-align:center;padding:0 20px;">Applying spiritual themes and premium styles...</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Processing Styles</div>
+        <div style="font-size:14px;opacity:0.6;text-align:center;padding:0 20px;">Perfectly matching your preview design...</div>
     `;
     document.body.appendChild(overlay);
 
-    // CREATE A "PATH-PROOF" EXPORT BOX
+    // CREATE A "STYLE-SYNCED" EXPORT BOX
     const exportBox = document.createElement('div');
-    // Position it TOPMOST but behind the loading overlay
     exportBox.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:999998;background:white;visibility:visible;';
     
-    // INLINE ALL CSS (Fixes the "../../css" path breakage issue)
-    let inlinedStyles = '';
-    try {
-        const sheets = Array.from(iframeDoc.styleSheets);
-        for (const sheet of sheets) {
-            try {
-                const rules = Array.from(sheet.cssRules || sheet.rules).map(r => r.cssText).join('\n');
-                inlinedStyles += `<style>${rules}</style>`;
-            } catch (e) { /* Fallback for potential security restrictions */ }
-        }
-        // If inlining failed, fallback to outerHTML of tags
-        if (!inlinedStyles) {
-            inlinedStyles = Array.from(iframeDoc.querySelectorAll('style, link')).map(s => s.outerHTML).join('');
-        }
-    } catch (e) { console.warn("CSS Inlining failed", e); }
+    // AGGRESSIVE STYLE EXTRACTION
+    let finalStyles = '';
+    
+    // 1. Collect all <style> contents
+    iframeDoc.querySelectorAll('style').forEach(s => {
+        finalStyles += `<style>${s.innerHTML}</style>`;
+    });
 
-    exportBox.innerHTML = inlinedStyles + originalContainer.outerHTML;
+    // 2. Collect all <link> contents (Fetching to bypass SecurityErrors)
+    const links = Array.from(iframeDoc.querySelectorAll('link[rel="stylesheet"]'));
+    for (const link of links) {
+        try {
+            const href = link.getAttribute('href');
+            // We must resolve relative paths manually if needed, but fetch usually works
+            const res = await fetch(href);
+            const cssText = await res.text();
+            finalStyles += `<style>${cssText}</style>`;
+        } catch (e) {
+            console.warn("Could not fetch external CSS:", link.href);
+        }
+    }
+
+    // 3. Add manual PDF-specific overrides to match the PREVIEW's exact look
+    finalStyles += `
+        <style>
+            body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .container { 
+                width: 794px !important; 
+                margin: 0 !important; 
+                padding: 15mm 20mm !important; 
+                box-shadow: none !important; 
+                transform: none !important;
+                background: white !important;
+            }
+            .page-cut-label { display: none !important; }
+        </style>
+    `;
+
+    exportBox.innerHTML = finalStyles + originalContainer.outerHTML;
     document.body.appendChild(exportBox);
 
-    const container = exportBox.querySelector('.container');
-    container.style.transform = 'none';
-    container.style.width = '794px';
-    container.style.padding = '15mm 20mm';
-    container.style.margin = '0';
-    container.style.boxShadow = 'none';
-
-    // Wait for layout
+    // Short delay for the injected styles to finish painting
     await new Promise(r => setTimeout(r, 2000));
 
     try {
-        const fileName = `UT_Itinerary_${Date.now()}.pdf`;
+        const fileName = `Itinerary_${Date.now()}.pdf`;
 
         const options = {
             margin:       0,
             filename:     fileName,
             image:        { type: 'jpeg', quality: 1.0 },
             html2canvas:  { 
-                scale: 1, // S23 Safe Scale
+                scale: 1, 
                 useCORS: true, 
                 backgroundColor: '#ffffff',
                 width: 794,
                 windowWidth: 794,
                 scrollY: 0,
-                scrollX: 0
+                scrollX: 0,
+                logging: false
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: ['css', 'legacy'] }
@@ -328,9 +343,9 @@ async function handleOfflineExport() {
 
         const pdfBlob = await html2pdf().set(options).from(exportBox).outputPdf('blob');
 
-        // VERIFICATION: Check if blob is far too small (indicates a blank page)
+        // VERIFICATION
         if (pdfBlob.size < 2000) {
-            throw new Error("Generated PDF is too small. Something went wrong with the capture.");
+            throw new Error("Empty PDF detected. Trying fallback rendering...");
         }
         
         // Convert to base64
