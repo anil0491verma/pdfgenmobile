@@ -366,8 +366,13 @@ async function handleOfflineExport() {
         }
 
         // 3. CONVERT CANVAS TO PDF
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        
+        // Safe library check
+        const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF ? window.jsPDF : null);
+        if (!jsPDFLib) throw new Error("PDF Library (jsPDF) not loaded. Please refresh.");
+
+        const pdf = new jsPDFLib('p', 'mm', 'a4');
         const imgProps = pdf.getImageProperties(imgData);
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
