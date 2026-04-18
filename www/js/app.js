@@ -302,15 +302,17 @@ async function handleOfflineExport() {
     finalStyles += `
         <style>
             * { animation: none !important; transition: none !important; }
+            body { background: #ffffff !important; }
             .container { 
                 width: 794px !important; 
                 padding: 20mm !important; 
                 margin: 0 !important; 
                 opacity: 1 !important; 
-                background: white !important;
+                background: #ffffff !important;
                 display: block !important;
                 height: auto !important;
             }
+            .page-cut-label { display: none !important; }
             .day-title, .itinerary-header { opacity: 1 !important; transform: none !important; }
         </style>
     `;
