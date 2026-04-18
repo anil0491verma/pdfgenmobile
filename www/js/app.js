@@ -152,7 +152,8 @@ function collectFormData() {
 // ----------------------------------------------------
 function formatItineraryContent(text) {
     if (!text) return 'Plan details will be finalized shortly.';
-    const lines = text.split('\\n');
+    // Handle both real newlines and escaped newlines
+    const lines = text.split(/\r?\n|\\n/);
     let html = '';
     let inList = false;
 
@@ -160,13 +161,14 @@ function formatItineraryContent(text) {
         let stripped = line.trim();
         if (!stripped) { html += '<br>'; return; }
         
-        const dayMatch = stripped.match(/^(Day\\s+\\d+.*)$/i);
+        // Match Day 1, Day 01, Day 1: [Title], etc.
+        const dayMatch = stripped.match(/^(Day\s*\d+.*)$/i);
         if (dayMatch) {
             if (inList) { html += '</ul>'; inList = false; }
             html += `<div class="day-title">${dayMatch[1]}</div>`; return;
         }
         
-        if (stripped.startsWith('🔹') || stripped.startsWith('🔸') || stripped.startsWith('📍')) {
+        if (stripped.startsWith('🔹') || stripped.startsWith('🔸') || stripped.startsWith('📍') || stripped.startsWith('🚩')) {
             if (inList) { html += '</ul>'; inList = false; }
             html += `<div class="itinerary-header">${stripped}</div>`; return;
         }
@@ -180,9 +182,6 @@ function formatItineraryContent(text) {
 
         if (stripped.startsWith('💡')) { html += `<div class="tag-line"><span class="tag-item">💡 ${stripped.substring(2).trim()}</span></div>`; return; }
         if (stripped.startsWith('🏨')) { html += `<div class="tag-line"><span class="tag-item">🏨 ${stripped.substring(2).trim()}</span></div>`; return; }
-
-        const exactTimeRegex = /^(.*\\((?:~?\\d{1,2}(?::\\d{2})?\\s*(?:AM|PM|am|pm)?\\s*[-–]\\s*~?\\d{1,2}(?::\\d{2})?\\s*(?:AM|PM|am|pm)?|.*?)\\))$/;
-        if (exactTimeRegex.test(stripped)) { html += `<div class="highlight-line">${stripped}</div>`; return; }
 
         html += `<div class="normal-line">${stripped}</div>`;
     });
@@ -227,6 +226,18 @@ async function handlePreview() {
       const doc = iframe.contentDocument || iframe.contentWindow.document;
       doc.body.contentEditable = true;
       doc.body.style.cursor = 'text';
+
+      // AUTO-SCALE TO FIT MOBILE SCREEN
+      const container = doc.querySelector('.container');
+      if (container) {
+          const screenWidth = window.innerWidth * 0.9;
+          const desiredWidth = 794; 
+          if (screenWidth < desiredWidth) {
+              const scale = screenWidth / desiredWidth;
+              container.style.transform = `scale(${scale})`;
+              container.style.transformOrigin = 'top center';
+          }
+      }
     };
 
     document.getElementById('previewModal').classList.remove('hidden');
@@ -248,47 +259,43 @@ async function handleOfflineExport() {
     const iframe = document.getElementById('previewModalIframe');
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     
-    // Clean up editing attributes
-    // Prepare iframe for capture - FORCE DESKTOP WIDTH for rendering
-    // This ensures all badges, tabs, and gradients render at high-fidelity
-    const originalIframeWidth = iframe.style.width;
-    iframe.style.width = '794px'; 
-    
-    iframeDoc.body.removeAttribute('contenteditable');
-    iframeDoc.body.style.cursor = '';
-    iframeDoc.querySelectorAll('.page-cut-label').forEach(el => el.remove());
-    
-    const printStyles = iframeDoc.createElement('style');
-    printStyles.id = 'pdf-print-overrides';
-    printStyles.textContent = `
-        body::before { display: none !important; }
-        .container { 
-            background-image: none !important; 
-            box-shadow: none !important; 
-            margin: 0 !important;
-            border: none !important;
-            width: 794px !important;
-            padding: 20mm !important;
-        }
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    `;
-    iframeDoc.head.appendChild(printStyles);
-
+    // 1. Show high-fidelity overlay
     const overlay = document.createElement('div');
     overlay.id = 'pdf-loading-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
         <div style="font-size:64px;margin-bottom:20px;">📄</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Capturing All Styles...</div>
-        <div style="font-size:14px;opacity:0.6;">Generating high-fidelity 5-page PDF</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Capturing Perfect Styles...</div>
+        <div style="font-size:14px;opacity:0.6;">Indenting layout and applying colors</div>
     `;
     document.body.appendChild(overlay);
+
+    // 2. Extract content AND styles from iframe
+    // We must put them in the MAIN document for html2pdf to see them correctly
+    const content = iframeDoc.querySelector('.container').cloneNode(true);
+    
+    // Clean content
+    content.querySelectorAll('.page-cut-label').forEach(el => el.remove());
+    content.style.transform = 'none'; // Remove preview scaling
+    content.style.width = '794px';
+    content.style.margin = '0 auto';
+    content.style.padding = '15mm 20mm'; // Left/Right Indentation
+    content.style.background = 'white';
+
+    const tempWrapper = document.createElement('div');
+    tempWrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;';
+    
+    // Copy Styles
+    const styleLinks = Array.from(iframeDoc.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(s => s.outerHTML).join('\n');
+    
+    tempWrapper.innerHTML = styleLinks + content.outerHTML;
+    document.body.appendChild(tempWrapper);
 
     await new Promise(r => setTimeout(r, 2000));
 
     try {
         const fileName = `Itinerary_${Date.now()}.pdf`;
-        const element = iframeDoc.querySelector('.container');
 
         const options = {
             margin:       0,
@@ -297,8 +304,6 @@ async function handleOfflineExport() {
             html2canvas:  { 
                 scale: 2,
                 useCORS: true, 
-                logging: false,
-                letterRendering: true,
                 backgroundColor: '#ffffff',
                 width: 794,
                 windowWidth: 794
@@ -307,11 +312,8 @@ async function handleOfflineExport() {
             pagebreak:    { mode: ['css', 'legacy'] }
         };
 
-        const pdfBlob = await html2pdf().set(options).from(element).outputPdf('blob');
+        const pdfBlob = await html2pdf().set(options).from(tempWrapper).outputPdf('blob');
         
-        // Restore iframe width
-        iframe.style.width = originalIframeWidth;
-
         // Convert blob to base64 for Capacitor Filesystem
         const base64Data = await blobToBase64(pdfBlob);
 
