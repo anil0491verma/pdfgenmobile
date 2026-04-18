@@ -249,77 +249,68 @@ async function handleOfflineExport() {
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     
     // Clean up editing attributes
+    // Prepare iframe body for capture
     iframeDoc.body.removeAttribute('contenteditable');
     iframeDoc.body.style.cursor = '';
-
-    // Remove screen-only preview helpers
     iframeDoc.querySelectorAll('.page-cut-label').forEach(el => el.remove());
     
-    // Create a temporary container that is visually correct for A4
-    const tempContainer = document.createElement('div');
-    tempContainer.id = 'pdf-export-container';
-    
-    // Set explicit size for the container - A4 is ~794px at 96dpi
-    // We keep it fixed at the top left so html2canvas sees it at 0,0
-    tempContainer.style.cssText = `
-        position: fixed; 
-        top: 0; 
-        left: 0; 
-        width: 794px; 
-        background: white; 
-        z-index: 10; 
-        overflow: visible;
-        visibility: visible;
+    // Inject print-specific override into the iframe itself
+    const printStyles = iframeDoc.createElement('style');
+    printStyles.id = 'pdf-print-overrides';
+    printStyles.textContent = `
+        body { background: white !important; margin: 0 !important; padding: 0 !important; width: 794px !important; }
+        .container { width: 100% !important; margin: 0 !important; box-shadow: none !important; padding: 15mm !important; border: none !important; }
+        .page-break { page-break-before: always; break-before: page; }
+        @media screen { 
+            body::before { display: none !important; } 
+            .container { background-image: none !important; padding-top: 10mm !important; }
+        }
     `;
-    
-    // Copy the ENTIRE document content (including <head> for styles!)
-    // We wrap it in a root-like class if needed, or just dump the whole thing
-    tempContainer.innerHTML = iframeDoc.documentElement.innerHTML;
-    
-    // Ensure the body background in the temp container is white (overriding the gray preview background)
-    const extraStyle = document.createElement('style');
-    extraStyle.textContent = `
-        body { background: white !important; padding: 0 !important; margin: 0 !important; }
-        .container { width: 100% !important; margin: 0 !important; box-shadow: none !important; padding: 20mm !important; }
-        @media screen { .container { width: 100% !important; border: none !important; } }
-    `;
-    tempContainer.appendChild(extraStyle);
+    iframeDoc.head.appendChild(printStyles);
 
-    // Show loading overlay (dark, so it hides our temp container)
+    // Show a high-quality loading overlay
     const overlay = document.createElement('div');
     overlay.id = 'pdf-loading-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
+    overlay.style.cssText = `
+        position: fixed; inset: 0; z-index: 99999;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        color: white; font-family: 'Inter', sans-serif;
+    `;
     overlay.innerHTML = `
-        <div style="font-size:48px;margin-bottom:20px;filter:drop-shadow(0 0 10px rgba(255,255,255,0.2));">📄</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:10px;background:linear-gradient(to right, #fb923c, #f87171);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Crafting Your PDF...</div>
-        <div style="font-size:14px;opacity:0.6;">Optimizing layouts and images</div>
+        <div style="font-size:64px;margin-bottom:24px;animation: pulse 2s infinite;">📄</div>
+        <div style="font-size:24px;font-weight:800;margin-bottom:8px;color:#f97316;">Creating Itinerary PDF</div>
+        <div style="font-size:14px;opacity:0.6;max-width:240px;text-align:center;">Converting your spiritual journey into a professional document...</div>
+        <style>@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }</style>
     `;
     document.body.appendChild(overlay);
-    document.body.appendChild(tempContainer);
 
-    // Give it more time to render images/styles correctly
-    await new Promise(r => setTimeout(r, 2000));
+    // Give the engine 2.5 seconds to settle everything
+    await new Promise(r => setTimeout(r, 2500));
 
     try {
-        const fileName = `UT_${new Date().getTime()}.pdf`;
+        const fileName = `UT_Itinerary_${Date.now()}.pdf`;
 
         const options = {
             margin:       [0, 0, 0, 0],
             filename:     fileName,
-            image:        { type: 'jpeg', quality: 0.98 },
+            image:        { type: 'jpeg', quality: 1.0 },
             html2canvas:  { 
-                scale: 2, 
+                scale: 2,
                 useCORS: true, 
                 logging: false,
                 letterRendering: true,
+                width: 794,
                 windowWidth: 794,
-                width: 794
+                scrollY: 0,
+                scrollX: 0
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: ['css', 'legacy'] }
         };
 
-        const pdfBlob = await html2pdf().set(options).from(tempContainer).outputPdf('blob');
+        // Capture DIRECTLY from the iframe body (most reliable source)
+        const pdfBlob = await html2pdf().set(options).from(iframeDoc.body).outputPdf('blob');
 
         // Convert blob to base64 for Capacitor Filesystem
         const base64Data = await blobToBase64(pdfBlob);
