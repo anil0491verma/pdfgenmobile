@@ -246,19 +246,29 @@ async function renderTemplateOffline(templateName, data) {
 
     // Simple Jinja Injection Regex Compiler
     for (const [key, value] of Object.entries(data)) {
-        // Handle simple {% if key %} blocks
+        // 1. Handle SECTION BLOCKS [block:key] (used for layout)
+        const blockRegex = new RegExp(`\\[block:${key}\\]([\\s\\S]*?)\\[/block:${key}\\]`, 'g');
+        if (!value || value.toString().trim() === "" || value === false) {
+            html = html.replace(blockRegex, '');
+        } else {
+            html = html.replace(blockRegex, '$1');
+        }
+
+        // 2. Handle FIELD IF BLOCKS {% if key %} (used for small items)
         const ifRegex = new RegExp(`{%\\s*if\\s*${key}\\s*%}([\\s\\S]*?){%\\s*endif\\s*%}`, 'g');
-        if (!value || value.toString().trim() === "") {
+        if (!value || value.toString().trim() === "" || value === false) {
             html = html.replace(ifRegex, '');
         } else {
             html = html.replace(ifRegex, '$1');
         }
 
+        // 3. Variables {{ key }}
         const varRegex = new RegExp(`{{\\s*${key}\\s*(?:\\|.*?)*}}`, 'g');
         html = html.replace(varRegex, value);
     }
     
     // Fallback cleanup for any remaining tags
+    html = html.replace(/\[block:.*?\][\s\S]*?\[\/block:.*?\]/g, '');
     html = html.replace(/{%\\s*if\\s*.*?\\s*%}[\\s\\S]*?{%\\s*endif\\s*%}/g, '');
     html = html.replace(/{{\\s*.*\\s*(?:\\|.*?)*}}/g, '');
     return html;

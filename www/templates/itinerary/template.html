@@ -486,7 +486,7 @@
     <div class="section-header">📍 Detailed Tour Plan</div>
     <div class="itinerary-body">{{ itinerary_content | default('Plan details will be finalized shortly.') | safe }}</div>
 
-    {% if show_breakup %}
+    [block:show_breakup]
     <table class="breakup-table">
       <thead>
         <tr>
@@ -533,9 +533,9 @@
         {% endif %}
       </tbody>
     </table>
-    {% endif %}
+    [/block:show_breakup]
 
-    {% if total_amount %}
+    [block:total_amount]
     <div class="price-card">
       <div class="price-label">Total Package Cost</div>
       <div class="price-value">
@@ -547,7 +547,7 @@
         (Inclusive of 10% Service Charge)
       </div>
     </div>
-    {% endif %}
+    [/block:total_amount]
 
     <!-- POLICIES POSTER PAGE -->
     <div class="policy-container">
