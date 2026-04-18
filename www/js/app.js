@@ -260,92 +260,81 @@ async function handleOfflineExport() {
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     const originalContainer = iframeDoc.querySelector('.container');
     
-    if (!originalContainer) { alert('No content found to export!'); return; }
+    if (!originalContainer) { alert('No content found!'); return; }
 
-    // SHOW LOADING OVERLAY
+    // SHOW LOADING OVERLAY (Semi-transparent so we can see the magic happen)
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
-        <div style="font-size:64px;margin-bottom:20px;">📄</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Processing Styles</div>
-        <div style="font-size:14px;opacity:0.6;text-align:center;padding:0 20px;">Perfectly matching your preview design...</div>
+        <div style="font-size:64px;margin-bottom:20px;">🎨</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Finalizing Design</div>
+        <div style="font-size:14px;opacity:0.8;text-align:center;padding:0 20px;" id="pdf-status">Waiting for images to load...</div>
     `;
     document.body.appendChild(overlay);
 
-    // CREATE A "STYLE-SYNCED" EXPORT BOX
+    // CREATE A VISIBLE EXPORT BOX
     const exportBox = document.createElement('div');
-    exportBox.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:999998;background:white;visibility:visible;';
+    exportBox.style.cssText = 'position:absolute;left:0;top:0;width:794px;z-index:999998;background:white;visibility:visible;box-shadow:none;';
     
     // AGGRESSIVE STYLE EXTRACTION
     let finalStyles = '';
-    
-    // 1. Collect all <style> contents
-    iframeDoc.querySelectorAll('style').forEach(s => {
-        finalStyles += `<style>${s.innerHTML}</style>`;
-    });
-
-    // 2. Collect all <link> contents (Fetching to bypass SecurityErrors)
+    iframeDoc.querySelectorAll('style').forEach(s => { finalStyles += `<style>${s.innerHTML}</style>`; });
     const links = Array.from(iframeDoc.querySelectorAll('link[rel="stylesheet"]'));
     for (const link of links) {
         try {
-            const href = link.getAttribute('href');
-            // We must resolve relative paths manually if needed, but fetch usually works
-            const res = await fetch(href);
+            const res = await fetch(link.href);
             const cssText = await res.text();
             finalStyles += `<style>${cssText}</style>`;
-        } catch (e) {
-            console.warn("Could not fetch external CSS:", link.href);
-        }
+        } catch (e) { finalStyles += link.outerHTML; }
     }
 
-    // 3. Add manual PDF-specific overrides to match the PREVIEW's exact look
     finalStyles += `
         <style>
-            body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .container { 
-                width: 794px !important; 
-                margin: 0 !important; 
-                padding: 15mm 20mm !important; 
-                box-shadow: none !important; 
-                transform: none !important;
-                background: white !important;
-            }
-            .page-cut-label { display: none !important; }
+            @media print { .container { width: 794px !important; padding: 15mm 20mm !important; margin: 0 !important; } }
+            .container { width: 794px !important; padding: 15mm 20mm !important; margin: 0 !important; background: white !important; box-shadow: none !important; }
         </style>
     `;
 
     exportBox.innerHTML = finalStyles + originalContainer.outerHTML;
     document.body.appendChild(exportBox);
 
-    // Short delay for the injected styles to finish painting
-    await new Promise(r => setTimeout(r, 2000));
+    // CRITICAL: WAIT FOR IMAGES
+    const images = Array.from(exportBox.querySelectorAll('img'));
+    const imagePromises = images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even if one image fails
+        });
+    });
+    
+    await Promise.all(imagePromises);
+    document.getElementById('pdf-status').textContent = 'Capturing high-resolution render...';
+    await new Promise(r => setTimeout(r, 1500)); // Final layout settling
 
     try {
         const fileName = `Itinerary_${Date.now()}.pdf`;
-
         const options = {
-            margin:       0,
-            filename:     fileName,
-            image:        { type: 'jpeg', quality: 1.0 },
-            html2canvas:  { 
+            margin: 0,
+            filename: fileName,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
                 scale: 1, 
                 useCORS: true, 
                 backgroundColor: '#ffffff',
                 width: 794,
                 windowWidth: 794,
                 scrollY: 0,
-                scrollX: 0,
-                logging: false
+                scrollX: 0
             },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: ['css', 'legacy'] }
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] }
         };
 
         const pdfBlob = await html2pdf().set(options).from(exportBox).outputPdf('blob');
 
-        // VERIFICATION
-        if (pdfBlob.size < 2000) {
-            throw new Error("Empty PDF detected. Trying fallback rendering...");
+        if (pdfBlob.size < 5000) { // Itineraries with graphics are usually > 10KB
+            throw new Error("Render yielded an empty document. Resetting canvas...");
         }
         
         // Convert to base64
