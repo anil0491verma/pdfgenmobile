@@ -262,21 +262,19 @@ async function handleOfflineExport() {
     
     if (!originalContainer) { alert('No content found!'); return; }
 
-    // SHOW LOADING OVERLAY (Semi-transparent so we can see the magic happen)
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
-        <div style="font-size:64px;margin-bottom:20px;">🎨</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Finalizing Design</div>
-        <div style="font-size:14px;opacity:0.8;text-align:center;padding:0 20px;" id="pdf-status">Waiting for images to load...</div>
+        <div style="font-size:64px;margin-bottom:20px;">⚡</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Finalizing PDF...</div>
+        <div style="font-size:14px;opacity:0.8;text-align:center;padding:0 20px;" id="pdf-status">Ensuring design fidelity...</div>
     `;
     document.body.appendChild(overlay);
 
-    // CREATE A VISIBLE EXPORT BOX
     const exportBox = document.createElement('div');
-    exportBox.style.cssText = 'position:absolute;left:0;top:0;width:794px;z-index:999998;background:white;visibility:visible;box-shadow:none;';
+    exportBox.id = "final-export-box";
+    exportBox.style.cssText = 'position:absolute;left:0;top:-10000px;width:794px;background:white;visibility:visible;';
     
-    // AGGRESSIVE STYLE EXTRACTION
     let finalStyles = '';
     iframeDoc.querySelectorAll('style').forEach(s => { finalStyles += `<style>${s.innerHTML}</style>`; });
     const links = Array.from(iframeDoc.querySelectorAll('link[rel="stylesheet"]'));
@@ -288,42 +286,53 @@ async function handleOfflineExport() {
         } catch (e) { finalStyles += link.outerHTML; }
     }
 
+    // FORCE VISIBILITY: Disable animations and force opacity: 1
     finalStyles += `
         <style>
-            @media print { .container { width: 794px !important; padding: 15mm 20mm !important; margin: 0 !important; } }
-            .container { width: 794px !important; padding: 15mm 20mm !important; margin: 0 !important; background: white !important; box-shadow: none !important; }
+            * { animation: none !important; transition: none !important; }
+            .container { 
+                width: 794px !important; 
+                padding: 20mm !important; 
+                margin: 0 !important; 
+                opacity: 1 !important; 
+                background: white !important;
+                display: block !important;
+                height: auto !important;
+            }
+            .day-title, .itinerary-header { opacity: 1 !important; transform: none !important; }
         </style>
     `;
 
     exportBox.innerHTML = finalStyles + originalContainer.outerHTML;
     document.body.appendChild(exportBox);
 
-    // CRITICAL: WAIT FOR IMAGES
+    // Wait for internal asset resolution
     const images = Array.from(exportBox.querySelectorAll('img'));
-    const imagePromises = images.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise(resolve => {
-            img.onload = resolve;
-            img.onerror = resolve; // Continue even if one image fails
-        });
-    });
+    await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })));
     
-    await Promise.all(imagePromises);
-    document.getElementById('pdf-status').textContent = 'Capturing high-resolution render...';
-    await new Promise(r => setTimeout(r, 1500)); // Final layout settling
+    // Check height
+    const height = exportBox.offsetHeight;
+    if (height < 100) {
+        document.body.removeChild(exportBox);
+        overlay.remove();
+        alert('Rendering Error: The document appears empty (Height: ' + height + 'px). Please check your data.');
+        return;
+    }
+
+    document.getElementById('pdf-status').textContent = 'Taking high-res snapshot...';
+    await new Promise(r => setTimeout(r, 1000));
 
     try {
-        const fileName = `Itinerary_${Date.now()}.pdf`;
+        const fileName = `UT_Itinerary_${Date.now()}.pdf`;
         const options = {
             margin: 0,
             filename: fileName,
-            image: { type: 'jpeg', quality: 0.98 },
+            image: { type: 'jpeg', quality: 1.0 },
             html2canvas: { 
                 scale: 1, 
                 useCORS: true, 
                 backgroundColor: '#ffffff',
                 width: 794,
-                windowWidth: 794,
                 scrollY: 0,
                 scrollX: 0
             },
@@ -333,8 +342,8 @@ async function handleOfflineExport() {
 
         const pdfBlob = await html2pdf().set(options).from(exportBox).outputPdf('blob');
 
-        if (pdfBlob.size < 5000) { // Itineraries with graphics are usually > 10KB
-            throw new Error("Render yielded an empty document. Resetting canvas...");
+        if (pdfBlob.size < 3000) {
+            throw new Error("PDF generated but appears empty (" + pdfBlob.size + " bytes).");
         }
         
         // Convert to base64
