@@ -306,26 +306,32 @@ async function handleOfflineExport() {
             .from(tempContainer)
             .outputPdf('blob');
 
-        // Create a download link and trigger it
-        const url = URL.createObjectURL(pdfBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
+        // Use Android's native Share sheet so the user picks where to save
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-        // Small delay then cleanup
-        setTimeout(() => {
-            URL.revokeObjectURL(url);
-            a.remove();
-        }, 2000);
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            // Android native share sheet — lets user Save to Files, WhatsApp, Email, etc.
+            await navigator.share({
+                title: 'UjjainTravel Itinerary',
+                text: 'Your travel document is ready',
+                files: [pdfFile]
+            });
+        } else {
+            // Fallback for desktop browsers
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+        }
 
         // Show success message
         overlay.innerHTML = `
             <div style="font-size:48px;margin-bottom:16px;">✅</div>
-            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">PDF Downloaded!</div>
-            <div style="font-size:14px;opacity:0.7;">Check your Downloads folder</div>
+            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">PDF Ready!</div>
+            <div style="font-size:14px;opacity:0.7;">Save it from the share menu</div>
         `;
         setTimeout(() => overlay.remove(), 2500);
 
