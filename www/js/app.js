@@ -258,71 +258,61 @@ function closePreviewModal() {
 async function handleOfflineExport() {
     const iframe = document.getElementById('previewModalIframe');
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    const container = iframeDoc.querySelector('.container');
+    const originalContainer = iframeDoc.querySelector('.container');
     
-    if (!container) { alert('No itinerary content found to export.'); return; }
+    if (!originalContainer) { alert('No itinerary content found.'); return; }
 
-    // 1. Show loading overlay
+    // SHOW LOADING OVERLAY
     const overlay = document.createElement('div');
-    overlay.id = 'pdf-loading-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.98);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
         <div style="font-size:64px;margin-bottom:20px;">📄</div>
-        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Capturing Itinerary</div>
-        <div style="font-size:14px;opacity:0.6;">Generating high-resolution document...</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Creating PDF</div>
+        <div style="font-size:14px;opacity:0.6;">Optimizing for your S23 hardware...</div>
     `;
     document.body.appendChild(overlay);
 
-    // 2. THE "TRUE SWAP" METHOD
-    // We move the ACTUAL WORKING container out of the iframe
-    // into the main document so the PDF engine sees it as a real, styled element.
-    const originalParent = container.parentNode;
-    const originalNextSibling = container.nextSibling;
-    const originalTransform = container.style.transform;
+    // CREATE A DEDICATED EXPORT BOX IN MAIN BODY
+    // This avoids all iframe isolation issues
+    const exportBox = document.createElement('div');
+    exportBox.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:-1;visibility:visible;background:white;';
+    
+    // Copy Styles and Content
+    const styles = Array.from(iframeDoc.querySelectorAll('style, link')).map(s => s.outerHTML).join('');
+    exportBox.innerHTML = styles + originalContainer.outerHTML;
+    document.body.appendChild(exportBox);
 
-    // Reset styles for export
+    const container = exportBox.querySelector('.container');
     container.style.transform = 'none';
-    container.style.width = '210mm'; // A4 width
+    container.style.width = '794px';
+    container.style.padding = '15mm 20mm'; // Your requested indentation
     container.style.margin = '0';
-    container.style.padding = '15mm 20mm';
-    container.style.background = 'white';
-    container.style.position = 'fixed';
-    container.style.left = '0';
-    container.style.top = '0';
-    container.style.zIndex = '99998'; // Just behind overlay
 
-    // Copy iframe head styles into main doc temporarily
-    const styleLinks = Array.from(iframeDoc.querySelectorAll('style, link[rel="stylesheet"]'))
-        .map(s => s.cloneNode(true));
-    styleLinks.forEach(s => document.head.appendChild(s));
-
-    // Move container to main body
-    document.body.appendChild(container);
-
-    // Short delay for layout recalculation
-    await new Promise(r => setTimeout(r, 2000));
+    // IMPORTANT: Wait for styles and layout (3 seconds for S23)
+    await new Promise(r => setTimeout(r, 3000));
 
     try {
-        const fileName = `Itinerary_${Date.now()}.pdf`;
+        const fileName = `UT_Itinerary_${Date.now()}.pdf`;
 
         const options = {
             margin:       0,
             filename:     fileName,
-            image:        { type: 'jpeg', quality: 1.0 },
+            image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { 
-                scale: 2,
+                scale: 1, // CRITICAL: Higher than 1 on S23 exceeds canvas memory for 5+ pages
                 useCORS: true, 
                 backgroundColor: '#ffffff',
-                width: 794, // 210mm at 96dpi
+                width: 794,
                 windowWidth: 794,
                 scrollY: 0,
-                scrollX: 0
+                scrollX: 0,
+                logging: false
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: ['css', 'legacy'] }
         };
 
-        const pdfBlob = await html2pdf().set(options).from(container).outputPdf('blob');
+        const pdfBlob = await html2pdf().set(options).from(exportBox).outputPdf('blob');
         
         // Convert to base64
         const base64Data = await blobToBase64(pdfBlob);
