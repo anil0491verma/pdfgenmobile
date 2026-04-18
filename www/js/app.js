@@ -249,50 +249,53 @@ async function handleOfflineExport() {
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     
     // Clean up editing attributes
-    // Prepare iframe body for capture
+    // Prepare iframe for capture
     iframeDoc.body.removeAttribute('contenteditable');
     iframeDoc.body.style.cursor = '';
     iframeDoc.querySelectorAll('.page-cut-label').forEach(el => el.remove());
     
-    // Inject print-specific override into the iframe itself
+    // Inject minimal overrides to hide preview-only visual aids
     const printStyles = iframeDoc.createElement('style');
     printStyles.id = 'pdf-print-overrides';
     printStyles.textContent = `
-        body { background: white !important; margin: 0 !important; padding: 0 !important; width: 794px !important; }
-        .container { width: 100% !important; margin: 0 !important; box-shadow: none !important; padding: 15mm !important; border: none !important; }
-        .page-break { page-break-before: always; break-before: page; }
-        @media screen { 
-            body::before { display: none !important; } 
-            .container { background-image: none !important; padding-top: 10mm !important; }
+        /* Hide preview helpers */
+        body::before { display: none !important; }
+        .container { 
+            background-image: none !important; 
+            box-shadow: none !important; 
+            margin: 0 auto !important;
+            border: none !important;
         }
+        /* Ensure background colors and gradients render */
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     `;
     iframeDoc.head.appendChild(printStyles);
 
-    // Show a high-quality loading overlay
+    // Show loading overlay
     const overlay = document.createElement('div');
     overlay.id = 'pdf-loading-overlay';
     overlay.style.cssText = `
         position: fixed; inset: 0; z-index: 99999;
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        background: rgba(15, 23, 42, 0.98);
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         color: white; font-family: 'Inter', sans-serif;
     `;
     overlay.innerHTML = `
-        <div style="font-size:64px;margin-bottom:24px;animation: pulse 2s infinite;">📄</div>
-        <div style="font-size:24px;font-weight:800;margin-bottom:8px;color:#f97316;">Creating Itinerary PDF</div>
-        <div style="font-size:14px;opacity:0.6;max-width:240px;text-align:center;">Converting your spiritual journey into a professional document...</div>
-        <style>@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }</style>
+        <div style="font-size:64px;margin-bottom:20px;">📄</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px;color:#f97316;">Finalizing PDF...</div>
+        <div style="font-size:14px;opacity:0.6;">Matching preview styles and colors</div>
     `;
     document.body.appendChild(overlay);
 
-    // Give the engine 2.5 seconds to settle everything
-    await new Promise(r => setTimeout(r, 2500));
+    // Give the engine time to process
+    await new Promise(r => setTimeout(r, 2000));
 
     try {
-        const fileName = `UT_Itinerary_${Date.now()}.pdf`;
+        const fileName = `Itinerary_${Date.now()}.pdf`;
+        const element = iframeDoc.querySelector('.container');
 
         const options = {
-            margin:       [0, 0, 0, 0],
+            margin:       0,
             filename:     fileName,
             image:        { type: 'jpeg', quality: 1.0 },
             html2canvas:  { 
@@ -300,17 +303,14 @@ async function handleOfflineExport() {
                 useCORS: true, 
                 logging: false,
                 letterRendering: true,
-                width: 794,
-                windowWidth: 794,
-                scrollY: 0,
-                scrollX: 0
+                backgroundColor: '#ffffff'
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: ['css', 'legacy'] }
         };
 
-        // Capture DIRECTLY from the iframe body (most reliable source)
-        const pdfBlob = await html2pdf().set(options).from(iframeDoc.body).outputPdf('blob');
+        // Capture EXACTLY the '.container' (the simulated A4 paper)
+        const pdfBlob = await html2pdf().set(options).from(element).outputPdf('blob');
 
         // Convert blob to base64 for Capacitor Filesystem
         const base64Data = await blobToBase64(pdfBlob);
