@@ -240,45 +240,105 @@ function closePreviewModal() {
 }
 
 // ----------------------------------------------------
-// OFFLINE PRINT/EXPORT TO NATIVE
-// Uses Android's built-in Print Service (Save as PDF)
-// Works on ALL Android devices — no plugins needed
+// OFFLINE PDF EXPORT — html2pdf.js (Pure JavaScript)
+// Renders HTML → Canvas → PDF entirely in JS
+// Works on ALL devices, 100% offline, zero native deps
 // ----------------------------------------------------
 async function handleOfflineExport() {
     const iframe = document.getElementById('previewModalIframe');
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     
-    // Remove contenteditable to fix pagination
+    // Clean up editing attributes
     iframeDoc.body.removeAttribute('contenteditable');
     iframeDoc.body.style.cursor = '';
+
+    // Remove screen-only preview helpers (page-break markers, etc.)
+    iframeDoc.querySelectorAll('.page-cut-label').forEach(el => el.remove());
     
-    // Extract the final clean HTML from the preview iframe
-    const finalHtml = iframeDoc.documentElement.outerHTML;
+    // Clone the entire body content into a temporary container in the main document
+    const tempContainer = document.createElement('div');
+    tempContainer.id = 'pdf-export-container';
+    tempContainer.style.cssText = 'position:absolute; left:-9999px; top:0; width:794px;'; // A4 width in px at 96dpi
     
-    // Android WebView blocks iframe.contentWindow.print()
-    // The bulletproof fix: replace the MAIN document with the PDF HTML,
-    // then call window.print() on the main window — this triggers
-    // Android's native Print dialog which has "Save as PDF" built in.
+    // Copy all styles from the iframe into the temp container
+    const iframeStyles = iframeDoc.querySelectorAll('style, link[rel="stylesheet"]');
+    let styleBlock = '<style>';
+    for (const s of iframeStyles) {
+        if (s.tagName === 'STYLE') {
+            styleBlock += s.textContent;
+        }
+    }
+    // Force print-friendly styles
+    styleBlock += `
+        body { margin: 0; padding: 20px 30px; font-size: 11pt; }
+        .page-break { page-break-before: always; break-before: page; }
+        @media screen { .page-cut-label { display: none !important; } }
+    `;
+    styleBlock += '</style>';
     
-    // Replace the entire page with the PDF content
-    document.open();
-    document.write(finalHtml);
-    document.close();
-    
-    // Wait for the content to fully render
-    await new Promise(r => setTimeout(r, 800));
-    
-    // Trigger Android's native Print Service (Save as PDF)
-    window.print();
-    
-    // After the user finishes with the print dialog, reload the app
-    window.onafterprint = () => {
-        setTimeout(() => window.location.reload(), 500);
-    };
-    
-    // Fallback: if onafterprint doesn't fire (some Android versions),
-    // reload after 8 seconds
-    setTimeout(() => window.location.reload(), 8000);
+    tempContainer.innerHTML = styleBlock + iframeDoc.body.innerHTML;
+    document.body.appendChild(tempContainer);
+
+    // Show a loading overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'pdf-loading-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
+    overlay.innerHTML = `
+        <div style="font-size:48px;margin-bottom:16px;">📄</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Generating PDF...</div>
+        <div style="font-size:14px;opacity:0.7;">This may take a few seconds</div>
+    `;
+    document.body.appendChild(overlay);
+
+    try {
+        const fileName = `UjjainTravel_${new Date().toISOString().slice(0,10)}.pdf`;
+
+        // html2pdf.js — guaranteed to work in any WebView
+        const pdfBlob = await html2pdf()
+            .set({
+                margin:       [10, 10, 10, 10],  // mm: top, left, bottom, right
+                filename:     fileName,
+                image:        { type: 'jpeg', quality: 0.95 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
+            })
+            .from(tempContainer)
+            .outputPdf('blob');
+
+        // Create a download link and trigger it
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+
+        // Small delay then cleanup
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+            a.remove();
+        }, 2000);
+
+        // Show success message
+        overlay.innerHTML = `
+            <div style="font-size:48px;margin-bottom:16px;">✅</div>
+            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">PDF Downloaded!</div>
+            <div style="font-size:14px;opacity:0.7;">Check your Downloads folder</div>
+        `;
+        setTimeout(() => overlay.remove(), 2500);
+
+    } catch (err) {
+        overlay.remove();
+        alert('PDF Generation Error: ' + err.message);
+    } finally {
+        // Cleanup temp container
+        tempContainer.remove();
+        // Restore editing in iframe
+        iframeDoc.body.contentEditable = true;
+        iframeDoc.body.style.cursor = 'text';
+    }
 }
 
 function showToast(msg, type = 'info') { alert(msg); }
