@@ -365,19 +365,34 @@ async function handleOfflineExport() {
             throw new Error("Validation Failed: The captured canvas is blank. Hardware rendering might be blocked.");
         }
 
-        // 3. CONVERT CANVAS TO PDF
-        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        // 3. CONVERT CANVAS TO PDF (Multi-page Support)
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         
-        // Safe library check
         const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF ? window.jsPDF : null);
         if (!jsPDFLib) throw new Error("PDF Library (jsPDF) not loaded. Please refresh.");
 
         const pdf = new jsPDFLib('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
         
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgHeightMm = (imgProps.height * pageWidth) / imgProps.width;
+        
+        let heightLeft = imgHeightMm;
+        let position = 0;
+
+        // First page
+        pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeightMm);
+        heightLeft -= pageHeight;
+
+        // Subsequent pages
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeightMm;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeightMm);
+            heightLeft -= pageHeight;
+        }
+
         const pdfBlob = pdf.output('blob');
 
         // INCREMENT AND SAVE BOOKING ID ON SUCCESS
