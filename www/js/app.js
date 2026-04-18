@@ -252,74 +252,74 @@ async function handleOfflineExport() {
     iframeDoc.body.removeAttribute('contenteditable');
     iframeDoc.body.style.cursor = '';
 
-    // Remove screen-only preview helpers (page-break markers, etc.)
+    // Remove screen-only preview helpers
     iframeDoc.querySelectorAll('.page-cut-label').forEach(el => el.remove());
     
-    // Clone the entire body content into a temporary container in the main document
+    // Create a temporary container that is visually correct for A4
     const tempContainer = document.createElement('div');
     tempContainer.id = 'pdf-export-container';
-    // IMPORTANT: Must be ON-SCREEN for html2canvas to capture it!
-    // The loading overlay (z-index:9999) hides it from the user.
-    tempContainer.style.cssText = 'position:fixed; left:0; top:0; width:794px; z-index:1; overflow:visible; background:white;';
     
-    // Copy all styles from the iframe into the temp container
-    const iframeStyles = iframeDoc.querySelectorAll('style, link[rel="stylesheet"]');
-    let styleBlock = '<style>';
-    for (const s of iframeStyles) {
-        if (s.tagName === 'STYLE') {
-            styleBlock += s.textContent;
-        }
-    }
-    // Force print-friendly styles
-    styleBlock += `
-        body { margin: 0; padding: 20px 30px; font-size: 11pt; }
-        .page-break { page-break-before: always; break-before: page; }
-        .page-cut-label { display: none !important; }
-        @media screen { .page-cut-label { display: none !important; } }
+    // Set explicit size for the container - A4 is ~794px at 96dpi
+    // We keep it fixed at the top left so html2canvas sees it at 0,0
+    tempContainer.style.cssText = `
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 794px; 
+        background: white; 
+        z-index: 10; 
+        overflow: visible;
+        visibility: visible;
     `;
-    styleBlock += '</style>';
     
-    tempContainer.innerHTML = styleBlock + iframeDoc.body.innerHTML;
+    // Copy the ENTIRE document content (including <head> for styles!)
+    // We wrap it in a root-like class if needed, or just dump the whole thing
+    tempContainer.innerHTML = iframeDoc.documentElement.innerHTML;
+    
+    // Ensure the body background in the temp container is white (overriding the gray preview background)
+    const extraStyle = document.createElement('style');
+    extraStyle.textContent = `
+        body { background: white !important; padding: 0 !important; margin: 0 !important; }
+        .container { width: 100% !important; margin: 0 !important; box-shadow: none !important; padding: 20mm !important; }
+        @media screen { .container { width: 100% !important; border: none !important; } }
+    `;
+    tempContainer.appendChild(extraStyle);
 
-    // Show loading overlay FIRST (so it covers the temp container)
+    // Show loading overlay (dark, so it hides our temp container)
     const overlay = document.createElement('div');
     overlay.id = 'pdf-loading-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:Inter,sans-serif;';
     overlay.innerHTML = `
-        <div style="font-size:48px;margin-bottom:16px;">📄</div>
-        <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Generating PDF...</div>
-        <div style="font-size:14px;opacity:0.7;">This may take a few seconds</div>
+        <div style="font-size:48px;margin-bottom:20px;filter:drop-shadow(0 0 10px rgba(255,255,255,0.2));">📄</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:10px;background:linear-gradient(to right, #fb923c, #f87171);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Crafting Your PDF...</div>
+        <div style="font-size:14px;opacity:0.6;">Optimizing layouts and images</div>
     `;
     document.body.appendChild(overlay);
-    // Append container AFTER overlay so overlay covers it
     document.body.appendChild(tempContainer);
 
-    // Wait for images and fonts to render inside the container
-    await new Promise(r => setTimeout(r, 1500));
+    // Give it more time to render images/styles correctly
+    await new Promise(r => setTimeout(r, 2000));
 
     try {
-        const fileName = `UjjainTravel_${new Date().toISOString().slice(0,10)}.pdf`;
+        const fileName = `UT_${new Date().getTime()}.pdf`;
 
-        // html2pdf.js — guaranteed to work in any WebView
-        const pdfBlob = await html2pdf()
-            .set({
-                margin:       [10, 10, 10, 10],  // mm: top, left, bottom, right
-                filename:     fileName,
-                image:        { type: 'jpeg', quality: 0.95 },
-                html2canvas:  { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false, 
-                    scrollX: 0,
-                    scrollY: 0,
-                    windowWidth: 794,
-                    width: 794
-                },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
-            })
-            .from(tempContainer)
-            .outputPdf('blob');
+        const options = {
+            margin:       [0, 0, 0, 0],
+            filename:     fileName,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { 
+                scale: 2, 
+                useCORS: true, 
+                logging: false,
+                letterRendering: true,
+                windowWidth: 794,
+                width: 794
+            },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak:    { mode: ['css', 'legacy'] }
+        };
+
+        const pdfBlob = await html2pdf().set(options).from(tempContainer).outputPdf('blob');
 
         // Convert blob to base64 for Capacitor Filesystem
         const base64Data = await blobToBase64(pdfBlob);
