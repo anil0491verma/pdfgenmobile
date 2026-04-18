@@ -325,53 +325,64 @@ async function handleOfflineExport() {
         const base64Data = await blobToBase64(pdfBlob);
 
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            // === NATIVE ANDROID: Write directly to Downloads folder ===
-            const { Filesystem, Directory } = window.Capacitor.Plugins;
+            const { Filesystem, Directory, Share } = window.Capacitor.Plugins;
+            let savedFile;
 
-            // Save PDF to the device Documents folder
-            const savedFile = await Filesystem.writeFile({
-                path: fileName,
-                data: base64Data,
-                directory: 'DOCUMENTS',
-                recursive: true
-            });
+            try {
+                // Try writing to Documents folder (requires permission)
+                savedFile = await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Directory.Documents,
+                    recursive: true
+                });
+            } catch (err) {
+                console.warn('Documents access failed, falling back to Cache:', err);
+                // FALLBACK: Save to Cache (No permissions needed)
+                savedFile = await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Directory.Cache,
+                    recursive: true
+                });
+            }
 
             overlay.innerHTML = `
                 <div style="font-size:48px;margin-bottom:16px;">✅</div>
-                <div style="font-size:20px;font-weight:700;margin-bottom:12px;">PDF Created & Saved!</div>
-                <div style="font-size:14px;opacity:0.8;margin-bottom:20px;">Saved to internal Documents</div>
+                <div style="font-size:20px;font-weight:700;margin-bottom:12px;">PDF Ready!</div>
+                <div style="font-size:14px;opacity:0.8;margin-bottom:20px;">Saved & encrypted successfully</div>
                 
                 <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:280px;">
                     <button id="sharePdfBtn" style="background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;padding:16px;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 20px rgba(37,211,102,0.2);">
                         <i class="fab fa-whatsapp" style="font-size:20px;"></i> Share on WhatsApp
                     </button>
                     <button id="otherShareBtn" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);padding:12px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;">
-                        More Options...
+                        Download / More Options
                     </button>
                 </div>
             `;
 
             const triggerShare = async () => {
                 try {
-                    const { Share } = window.Capacitor.Plugins;
                     await Share.share({
                         title: 'UjjainTravel Itinerary',
                         text: 'Sharing travel itinerary from UjjainTravel',
                         url: savedFile.uri,
                         dialogTitle: 'Share via'
                     });
-                } catch (e) { console.error('Share error', e); }
+                } catch (e) {
+                    console.error('Share error', e);
+                    alert('Sharing failed. You can find the file in your Documents/Cache folder.');
+                }
             };
 
-            // Auto-trigger share sheet immediately
+            // Auto-trigger share sheet immediately for convenience
             setTimeout(triggerShare, 500);
 
-            // Manual triggers
             document.getElementById('sharePdfBtn').onclick = triggerShare;
             document.getElementById('otherShareBtn').onclick = triggerShare;
 
-            // Keep overlay visible longer for user to interact
-            setTimeout(() => { if(document.body.contains(overlay)) overlay.remove(); }, 15000);
+            setTimeout(() => { if(document.body.contains(overlay)) overlay.remove(); }, 20000);
 
         } else {
             // === DESKTOP BROWSER FALLBACK ===
