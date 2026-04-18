@@ -239,18 +239,26 @@ async function handlePreview() {
       doc.body.contentEditable = true;
       doc.body.style.cursor = 'text';
 
-      // AUTO-SCALE TO FIT MOBILE SCREEN
-      const container = doc.querySelector('.container');
-      if (container) {
-          const screenWidth = window.innerWidth * 0.9;
-          const desiredWidth = 794; 
-          if (screenWidth < desiredWidth) {
-              const scale = screenWidth / desiredWidth;
-              container.style.transform = `scale(${scale})`;
-              container.style.transformOrigin = 'top center';
-          }
-      }
+      // NEW VIRTUAL DESKTOP SCALING FOR PREVIEW
+      const parent = iframe.parentElement;
+      const parentWidth = parent.clientWidth || window.innerWidth;
+      const targetWidth = 794; // A4 Standard
+      const scale = (parentWidth - 40) / targetWidth; // 40px padding
+
+      iframe.style.width = targetWidth + 'px';
+      iframe.style.height = (targetWidth * 1.5) + 'px'; // Tall for scroll
+      iframe.style.transform = `scale(${scale})`;
+      iframe.style.transformOrigin = 'top left';
+      
+      // Center it
+      const leftShift = (parentWidth - (targetWidth * scale)) / 2;
+      iframe.style.marginLeft = leftShift + 'px';
+      iframe.style.border = '1px solid #e1e4e8';
+      iframe.style.backgroundColor = 'white';
     };
+
+    document.getElementById('previewModal').classList.remove('hidden');
+    document.getElementById('previewModal').classList.add('flex');
 
     document.getElementById('previewModal').classList.remove('hidden');
     setTimeout(() => { document.getElementById('previewModal').classList.replace('opacity-0', 'opacity-100'); }, 10);
